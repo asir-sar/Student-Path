@@ -38,9 +38,11 @@ Requires [uv](https://docs.astral.sh/uv/). Dependencies are declared in `pyproje
 uv sync                                       # creates .venv (Python 3.11) with all dependency groups
 uv run sp config                              # show the effective settings
 uv run pytest                                 # tests
+uv run pre-commit install                     # once: ruff, pyright and file checks on every commit
+uv run pre-commit run --all-files             # run all checks manually
 ```
 
-Every command has `--help`.
+Every `sp` command has `--help`.
 
 For a lighter environment, leave out groups, e.g. `uv sync --no-group ml`. The groups are `ingest`, `ml`, `serve`, `eval` and `dev`.
 

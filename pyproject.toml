@@ -78,3 +78,16 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 110
 target-version = "py311"
+extend-exclude = ["src/student_path/legacy"]  # superseded v1 code (ADR-014)
+force-exclude = true  # also when pre-commit passes file names explicitly
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pyright]
+include = ["src", "tests"]
+exclude = ["src/student_path/legacy", "**/__pycache__"]
+pythonVersion = "3.11"
+venvPath = "."
+venv = ".venv"
+typeCheckingMode = "standard"

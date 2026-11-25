@@ -14,7 +14,7 @@ Progress tracker for the v2 plan. Details, code skeletons and the reasoning behi
 - [x] **P0.2** uv: `pyproject.toml`, `uv.lock`, dependency groups, CPU-only torch
 - [x] **P0.3** package layout `src/student_path/`, `sp` CLI, v1 code isolated in `legacy/`, PDF in `data/source/`
 - [x] **P0.4** typed settings (`student_path/settings.py`) and matching `.env.example`
-- [ ] **P0.5** pre-commit (ruff lint + format), pyright, pytest wired in
+- [x] **P0.5** pre-commit (ruff lint + format), pyright, pytest wired in
 - [ ] **P0.6** `docker-compose.yml` with Qdrant (pinned tag); embedded mode stays the default for development
 - [ ] **P0.7** `CLAUDE.md` / `AGENTS.md`: commands, layout, conventions, "never" list
 

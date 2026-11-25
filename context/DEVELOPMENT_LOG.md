@@ -138,24 +138,39 @@ Chronological record of all development activity, decisions, and findings.
 
 ---
 
-<!-- 
+## 2026-11-25 — P0.5: pre-commit, ruff rules, pyright
+
+### What happened
+- `.pre-commit-config.yaml`: file hygiene hooks (pre-commit-hooks v6.0.0: whitespace, end of file, YAML/TOML, merge conflicts, private keys, files >1 MB) plus local hooks that run `ruff check --fix`, `ruff format` and `pyright` through uv, so they use the versions pinned in `uv.lock`. Installed as a git hook.
+- Ruff lint rules: E, F, I, UP, B, SIM. Pyright in `standard` mode over `src` and `tests`.
+- First full run: 0 ruff findings, 0 pyright errors in the new code, 11 tests passing. The hooks only stripped trailing spaces from the log's entry template.
+
+### Key decisions
+- Legacy code is excluded everywhere (ruff `force-exclude`, pre-commit global `exclude`, pyright `exclude`). Pre-commit passes file names explicitly, which bypasses ruff's `extend-exclude`, so the first run rewrote the legacy files. They were reverted and `force-exclude` was added, so the E1 baseline stays byte-for-byte unchanged.
+
+### Next steps
+- P0.6: `docker-compose.yml` for Qdrant. P0.7: `CLAUDE.md`. Then Phase 1.
+
+---
+
+<!--
 Template for new entries:
 
 ## YYYY-MM-DD — Title
 
 ### What happened
-- 
+-
 
 ### Artifacts created/modified
-- 
+-
 
 ### Key decisions
-- 
+-
 
 ### Open questions
-- 
+-
 
 ### Blockers
-- 
+-
 
 -->
