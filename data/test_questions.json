@@ -1,0 +1,107 @@
+[
+  {
+    "id": "Q01",
+    "question": "What is the ECTS credit for Software-Sicherheit?",
+    "expected_answer": "5 ECTS",
+    "expected_module_ids": ["5622"],
+    "type": "lookup"
+  },
+  {
+    "id": "Q02",
+    "question": "Who teaches Software-Sicherheit?",
+    "expected_answer": "Posegga",
+    "expected_module_ids": ["5622"],
+    "type": "lookup"
+  },
+  {
+    "id": "Q03",
+    "question": "Which courses are offered in the summer semester?",
+    "expected_answer": "List of all summer semester courses",
+    "expected_module_ids": [],
+    "type": "recommendation"
+  },
+  {
+    "id": "Q04",
+    "question": "I want to learn about IT security. What courses are available?",
+    "expected_answer": "Software-Sicherheit and other security-related courses",
+    "expected_module_ids": ["5622"],
+    "type": "recommendation"
+  },
+  {
+    "id": "Q05",
+    "question": "What are the prerequisites for Software-Sicherheit?",
+    "expected_answer": "Formal: None. Recommended: Advanced IT Security",
+    "expected_module_ids": ["5622"],
+    "type": "lookup"
+  },
+  {
+    "id": "Q06",
+    "question": "Which courses can I take in English?",
+    "expected_answer": "List of courses with English as language of instruction",
+    "expected_module_ids": [],
+    "type": "recommendation"
+  },
+  {
+    "id": "Q07",
+    "question": "Plan a semester with approximately 30 ECTS focusing on security topics",
+    "expected_answer": "A combination of security courses summing to ~30 ECTS",
+    "expected_module_ids": [],
+    "type": "planning"
+  },
+  {
+    "id": "Q08",
+    "question": "What is the assessment method for Software-Sicherheit?",
+    "expected_answer": "80% written/oral exam + 20% presentation",
+    "expected_module_ids": ["5622"],
+    "type": "lookup"
+  },
+  {
+    "id": "Q09",
+    "question": "Which courses have no formal prerequisites?",
+    "expected_answer": "List of courses where prerequisites are 'Keine' or 'None'",
+    "expected_module_ids": [],
+    "type": "recommendation"
+  },
+  {
+    "id": "Q10",
+    "question": "What is the workload for Software-Sicherheit?",
+    "expected_answer": "150 hours total: 45h contact + 30h exercises + 75h self-study",
+    "expected_module_ids": ["5622"],
+    "type": "lookup"
+  },
+  {
+    "id": "Q11",
+    "question": "Compare the ECTS and prerequisites of two security courses",
+    "expected_answer": "Side-by-side comparison of selected courses",
+    "expected_module_ids": [],
+    "type": "comparison"
+  },
+  {
+    "id": "Q12",
+    "question": "Which courses are in the IT-SecRel focus area?",
+    "expected_answer": "All courses assigned to Modulgruppe IT-SecRel",
+    "expected_module_ids": ["5622"],
+    "type": "recommendation"
+  },
+  {
+    "id": "Q13",
+    "question": "I'm interested in machine learning. What do you recommend?",
+    "expected_answer": "Courses related to ML/AI topics",
+    "expected_module_ids": [],
+    "type": "recommendation"
+  },
+  {
+    "id": "Q14",
+    "question": "Which courses have both lectures and exercises (V+Ü)?",
+    "expected_answer": "Courses with Vorlesung + Übung format",
+    "expected_module_ids": [],
+    "type": "recommendation"
+  },
+  {
+    "id": "Q15",
+    "question": "What literature is recommended for Software-Sicherheit?",
+    "expected_answer": "Howard & LeBlanc, McGraw, Viega & McGraw, Graff & van Wyk, etc.",
+    "expected_module_ids": ["5622"],
+    "type": "lookup"
+  }
+]

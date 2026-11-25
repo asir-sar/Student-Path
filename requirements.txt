@@ -1,0 +1,11 @@
+docling
+sentence-transformers
+FlagEmbedding
+qdrant-client
+langchain
+langgraph
+langchain-google-genai
+fastapi
+uvicorn
+ragas
+python-dotenv

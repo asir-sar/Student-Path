@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Student-Path RAG Blueprint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE work: a graphics-desk explainer for one engineer-learner, conclusion first
+   IDEA a newspaper explainer of a system: the finding is the headline, the pipeline is the main graphic
+   PICTURE three colour zones (build, knowledge, ask) drawn as one route, a token travelling the ask path
+   COLOUR salmon ground, warm ink, teal for the system, claret for the fixes and the verdict
+   TYPE Libre Franklin 800 display + Libre Franklin text
+   LAYOUT laptop: headline and lead left, 2x2 figures right, diagram full width; phone: title, figures, diagram */
+:root{color-scheme:light dark;--bg:light-dark(#ffe3dc,#1c1512);--ink:light-dark(#1a1817,#f3e8e3);--mute:light-dark(#5c4e49,#c4b3ac);--teal:light-dark(#0d7680,#56bcc6);--claret:light-dark(#990f3d,#f2668f);--panel:light-dark(#fff5f1,#291f1b);--rule:light-dark(rgba(26,24,23,.17),rgba(243,232,227,.2));--zb:light-dark(rgba(13,118,128,.11),rgba(86,188,198,.12));--zk:light-dark(rgba(26,24,23,.06),rgba(243,232,227,.07));--za:light-dark(rgba(153,15,61,.08),rgba(242,102,143,.11))}
+:root[data-theme=light]{color-scheme:light}
+:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html{scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Libre Franklin",system-ui,"Segoe UI",Roboto,sans-serif;overflow-x:clip}
+.band{padding:clamp(28px,4vw,56px) max(5vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+h1{font-weight:800;font-size:clamp(32px,4.4vw,52px);line-height:1.05;letter-spacing:-.02em;margin:0 0 16px;text-wrap:balance}
+h2{font-weight:800;font-size:clamp(24px,2.6vw,32px);line-height:1.1;letter-spacing:-.015em;margin:0 0 12px;text-wrap:balance;max-width:28ch}
+h3{font-size:17px;line-height:1.3;margin:0 0 8px}
+p{margin:0 0 12px;max-width:70ch}
+a{color:var(--teal)}
+a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+code{font-size:14px;overflow-wrap:anywhere}
+.top{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:clamp(20px,4vw,48px);align-items:end}
+.lead{font-size:17px;margin:0}
+.figs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-top:2px solid var(--ink)}
+.figs div{padding:12px 14px 12px 0;border-bottom:1px solid var(--rule)}
+.figs b{display:block;font-weight:800;font-size:clamp(26px,3vw,36px);line-height:1.1;white-space:nowrap}
+.figs span{display:block;font-size:14px;line-height:1.35;color:var(--mute);margin-top:4px}
+.figs .c b{color:var(--claret)}
+figure{margin:0}
+figcaption{font-size:14px;color:var(--mute);margin-top:10px;max-width:92ch}
+.dg svg{display:block;width:100%;height:auto;color:var(--ink)}
+.dg text{font-family:inherit;font-size:13px}
+.zb{fill:var(--zb)}.zk{fill:var(--zk)}.za{fill:var(--za)}
+.zt{font-weight:700;fill:var(--ink);font-size:14px}
+.box{fill:var(--panel);stroke:var(--rule)}
+.box.hot{stroke:var(--claret);stroke-width:2}
+.bt{font-weight:700;fill:var(--ink);text-anchor:middle}
+.bt.hot{fill:var(--claret)}
+.bs{fill:var(--mute);text-anchor:middle}
+.ar{stroke:var(--ink);stroke-width:1.4;fill:none}
+.al{fill:var(--mute)}
+.tok{fill:var(--claret)}
+nav.sec{display:flex;gap:2px;overflow-x:auto;padding:0 max(5vw,16px);border-block:1px solid var(--rule);background:var(--bg)}
+nav.sec a{flex:none;color:var(--ink);text-decoration:none;font-weight:600;font-size:15px;padding:12px;line-height:20px}
+nav.sec a:hover{color:var(--teal)}
+@media(min-width:900px){nav.sec{position:sticky;top:0;z-index:5}}
+.two{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:clamp(20px,4vw,48px);align-items:start}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px;color:var(--mute);margin:4px 0 10px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.lo{border:2px solid var(--mute)}.ln{background:var(--teal)}
+.dbr,.dbax{display:grid;grid-template-columns:9.5em minmax(0,1fr) 5.6em;gap:12px;align-items:center}
+.dbr{min-height:27px;font-size:14px}
+.dbax{font-size:13px;color:var(--mute);border-bottom:1px solid var(--rule);padding-bottom:4px;margin-bottom:4px}
+.dbax div{position:relative;height:18px}
+.dbax span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.lab{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trk{position:relative;height:14px}
+.trk::before{content:"";position:absolute;left:0;right:0;top:6px;height:1px;background:var(--rule)}
+.seg{position:absolute;top:5px;height:4px;border-radius:2px;background:var(--teal);opacity:.35}
+.dot{position:absolute;top:2px;width:10px;height:10px;border-radius:50%;transform:translateX(-50%)}
+.dot.o{border:2px solid var(--mute);background:var(--bg)}
+.dot.n{background:var(--teal)}
+.val{text-align:right;white-space:nowrap;color:var(--mute);font-variant-numeric:tabular-nums}
+.val b{color:var(--ink)}
+ul.find{list-style:none;margin:0;padding:0;border-top:2px solid var(--ink)}
+ul.find li{padding:10px 0;border-bottom:1px solid var(--rule);font-size:15px}
+ul.find b{color:var(--ink)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{text-align:left;vertical-align:top;padding:9px 10px 9px 0;border-bottom:1px solid var(--rule)}
+thead th{border-bottom:2px solid var(--ink);font-size:14px;color:var(--mute);font-weight:600}
+td.n,th.n{text-align:right;padding:9px 8px;font-variant-numeric:tabular-nums}
+th small,td small{display:block;font-weight:400;color:var(--mute);font-size:13px}
+.mx{min-width:820px}
+.mx tbody th{font-weight:600;min-width:12em}
+.mx td.n{width:3.4em}
+.h1{background:transparent}.h2{background:color-mix(in srgb,var(--teal) 12%,transparent)}.h3{background:color-mix(in srgb,var(--teal) 22%,transparent)}.h4{background:color-mix(in srgb,var(--teal) 34%,transparent)}.h5{background:color-mix(in srgb,var(--teal) 48%,transparent)}
+.sc{white-space:nowrap;padding-left:12px}
+.sc span{display:inline-block;width:90px;height:10px;background:var(--rule);vertical-align:middle;margin-right:8px;border-radius:2px;overflow:hidden}
+.sc i{display:block;height:100%;background:var(--teal)}
+.rec .sc i{background:var(--claret)}
+.rec th,.rec .sc b{color:var(--claret)}
+.rec em{font-style:normal;font-size:13px;font-weight:700;border:1px solid var(--claret);border-radius:3px;padding:0 5px;margin-left:6px;white-space:nowrap}
+.cols3{display:grid;grid-template-columns:repeat(auto-fit,minmax(15em,1fr));gap:8px 28px;margin-top:22px;font-size:15px}
+.cols3 p{margin:0;padding-top:8px;border-top:1px solid var(--rule)}
+.gax,.grow{display:grid;grid-template-columns:15em minmax(0,1fr);gap:18px}
+.gax{border-bottom:2px solid var(--ink)}
+.gax .t{position:relative;height:28px;font-size:13px;color:var(--mute)}
+.gax .t span{position:absolute;top:5px;transform:translateX(-50%);white-space:nowrap}
+.gax .t span:first-child{transform:none}
+.gax .t span:last-child{transform:translateX(-100%)}
+.grow{padding:10px 0;border-bottom:1px solid var(--rule)}
+.glab b{display:block;font-size:15px;line-height:1.3}
+.glab span{font-size:13px;color:var(--mute)}
+.gbar{position:relative;height:16px;margin:2px 0 6px;background:repeating-linear-gradient(to right,var(--rule) 0 1px,transparent 1px 12.5%)}
+.gbar i{position:absolute;top:2px;height:12px;border-radius:3px;background:var(--teal)}
+.gbar i.st{background:transparent;border:2px dashed var(--teal)}
+.gate{font-size:14px;margin:0;max-width:none}
+.gate b{color:var(--claret);font-weight:700}
+.loop{margin:0;padding-left:1.4em;border-top:2px solid var(--ink)}
+.loop li{padding:9px 0 9px 4px;border-bottom:1px solid var(--rule)}
+.loop li::marker{font-weight:800;color:var(--teal)}
+footer{font-size:14px;color:var(--mute);border-top:1px solid var(--rule)}
+footer p{max-width:none}
+.mb{fill:var(--teal)}.mb.ai{fill:var(--claret)}
+.mbt{fill:var(--bg);font-weight:700;text-anchor:middle;font-size:14px}
+.mc{fill:none;stroke:var(--mute);stroke-opacity:.55;stroke-width:1.5}
+.md{fill:var(--teal)}.md.ai{fill:var(--claret)}
+.ml{fill:var(--ink)}
+.mr{fill:var(--ink)}
+.mrt{fill:var(--bg);font-weight:800;font-size:15px;text-anchor:middle}
+.mrs{fill:var(--bg);font-size:13px;text-anchor:middle;opacity:.8}
+@media(max-width:900px){.top,.two{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){table{font-size:13px}th,td{padding:6px 4px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--rule)}.stack td{display:flex;justify-content:space-between;gap:12px;border:0;text-align:right}.stack td::before{content:attr(data-l);color:var(--mute);text-align:left;flex:none}.gax,.grow{grid-template-columns:minmax(0,1fr);gap:4px}.gax>div:first-child{display:none}.dbr,.dbax{grid-template-columns:7.6em minmax(0,1fr) 5em;gap:8px}.dbr{font-size:13px}}
+</style>
+</head>
+<body>
+<header class="band">
+ <div class="wrap top">
+  <div>
+   <h1>Records first, vectors second, a solver for plans</h1>
+   <p class="lead">Your module catalogue is a database printed as a PDF: 201 modules with the same 17 fields, plus degree rules on pp. 17–18. Cut it by the PDF's own bookmarks and the Docling output you already have yields 99% of the fields instead of 47%. On that clean base, a LangGraph router sends each question to exact records, hybrid search or a CP-SAT planner, and Gemini writes the cited answer.</p>
+  </div>
+  <div class="figs">
+   <div><b>201</b><span>modules behind 204 bookmarks; your modules.json holds 271 records</span></div>
+   <div class="c"><b>47% → 99%</b><span>of 16 fields found per module, same Docling output</span></div>
+   <div><b>603 / 603</b><span>pages carry a text layer, so OCR stays off</span></div>
+   <div><b>28–41 days</b><span>8 phases, each closed by a metric gate</span></div>
+  </div>
+ </div>
+</header>
+<section class="band" id="architecture" style="padding-top:0">
+ <div class="wrap">
+  <figure>
+   <div id="arch" class="dg"></div>
+   <figcaption>Build time turns the PDF into validated records once per catalogue version. At ask time a router picks the tool and every answer is checked against the records before it reaches the student. Claret marks the two decisive pieces: bookmark segmentation and the typed tools. Qdrant holds two collections, module views and regulation chunks.</figcaption>
+  </figure>
+ </div>
+</section>
+<nav class="sec" aria-label="Sections">
+ <a href="#evidence">Evidence</a><a href="#questions">Questions</a><a href="#options">Options</a><a href="#roadmap">Roadmap</a><a href="#mindmap">Mindmap</a><a href="#workflow">AI workflow</a>
+</nav>
+<section class="band" id="evidence">
+ <div class="wrap">
+  <h2>Your parser was fine; the segmentation was not</h2>
+  <p>A spike reused your existing Docling JSON unchanged. It only cut modules by bookmark page ranges and anchored each table row on the 17 known field labels, and it was measured on the same 201 modules.</p>
+  <div class="two">
+   <div>
+    <div class="legend"><span><i class="lo"></i>current modules.json</span><span><i class="ln"></i>bookmarks + label anchors</span></div>
+    <div class="dbax"><div></div><div><span style="left:0">0%</span><span style="left:50%">50%</span><span style="left:100%">100%</span></div><div></div></div>
+    <div id="db"></div>
+   </div>
+   <ul class="find">
+    <li><b>The PDF is digital.</b> All 603 pages have a text layer, but your parser runs OCR (Docling's default).</li>
+    <li><b>The bookmarks are the module boundaries.</b> All 188 numbered modules start exactly on their bookmarked page and span 2–6 pages.</li>
+    <li><b>module_id is not a key.</b> 5851 and 5853 each name two different modules, and 13 modules have no number. Key on the exam number (PN).</li>
+    <li><b>Why the old records broke.</b> Table-of-contents rows became ghost modules, and headers that merge ID and title glued neighbouring modules together.</li>
+    <li><b>Still to clean.</b> 50 content fields start with a page-break fragment, there are 2,124 hyphenation artifacts, and German and English are interleaved in one value.</li>
+    <li><b>Free ground truth.</b> The overview tables on pp. 5–16 list ECTS, hours and lecturers for reconciliation. The rules on pp. 17–18 feed the planner.</li>
+   </ul>
+  </div>
+ </div>
+</section>
+<section class="band" id="questions">
+ <div class="wrap">
+  <h2>Eight kinds of questions need five kinds of machinery</h2>
+  <p>Top-k retrieval returns k items, but "all English summer modules" can have 60. ECTS sums and rule checks must be exact, so the router sends each type where it is answered by construction.</p>
+  <table class="stack">
+   <thead><tr><th>Question type</th><th>Example</th><th>Handled by</th><th>Gate metric</th></tr></thead>
+   <tbody id="qt"></tbody>
+  </table>
+ </div>
+</section>
+<section class="band" id="options">
+ <div class="wrap">
+  <h2>Only the structured-first design covers every question type</h2>
+  <p>Scores are design judgments from 1 to 5, weighted as shown under each criterion. "Ease" 5 means easiest to build. Phase 2 replaces the judgments with measurements for naive RAG (baseline B0), long context (B1) and the new system. The recommended design contains advanced RAG as its discovery part, so nothing is lost by choosing it.</p>
+  <div class="scroll"><table class="mx"><thead id="mxh"></thead><tbody id="mxb"></tbody></table></div>
+  <div class="cols3">
+   <p><b>Not fine-tuning the LLM.</b> Knowledge injected by training is unreliable, carries no citations and goes stale with the next catalogue.</p>
+   <p><b>Not full GraphRAG.</b> The relationships (groups, recommended skills, lecturers) are few and explicit, so they are extracted deterministically.</p>
+   <p><b>Not free-form text-to-SQL.</b> Typed read-only tools are safer and testable. A guarded version stays as a stretch goal.</p>
+  </div>
+ </div>
+</section>
+<section class="band" id="roadmap">
+ <div class="wrap">
+  <h2>Eight phases, each closed by a measured gate</h2>
+  <p>The scale is focused working days: about 6–8 weeks full-time, or one semester part-time. Every phase leaves a runnable system. Gates are starting targets, to be reset against the baselines measured in P2.</p>
+  <div class="gax"><div></div><div class="t" id="gt"></div></div>
+  <div id="gr"></div>
+ </div>
+</section>
+<section class="band" id="mindmap">
+ <div class="wrap">
+  <h2>The expert's map of the project</h2>
+  <p>Nine areas to keep in view while you build. Data understanding and evaluation come first, and the claret branch is how to work with AI tools without outsourcing the learning.</p>
+  <figure><div id="mm" class="dg"></div></figure>
+ </div>
+</section>
+<section class="band" id="workflow">
+ <div class="wrap">
+  <h2>Work with AI like a senior engineer: checks first, core code yours</h2>
+  <div class="two">
+   <div>
+    <h3>The loop for every task</h3>
+    <ol class="loop">
+     <li>Write the check first: a test, an eval case or a metric gate.</li>
+     <li>Ask the assistant for a plan, not code, and critique it against real data samples.</li>
+     <li>Write the learning-critical core yourself; delegate the scaffolding.</li>
+     <li>Run the tests and evals, and read the failures, not only the score.</li>
+     <li>Have the assistant review your diff; review every line it wrote.</li>
+     <li>Log the decision and the numbers in DEVELOPMENT_LOG.md.</li>
+    </ol>
+    <p style="margin-top:14px">Keep a short <code>CLAUDE.md</code> (commands, layout, conventions, a "never" list) and your <code>context/</code> docs current. Start each session from the plan section you are working on.</p>
+   </div>
+   <table>
+    <thead><tr><th>Delegate to the assistant</th><th>Do it yourself</th></tr></thead>
+    <tbody id="dl"></tbody>
+   </table>
+  </div>
+ </div>
+</section>
+<footer class="band">
+ <div class="wrap">
+  <p>The full step-by-step guide, with code skeletons, data model, ADRs and gates, is <code>context/IMPLEMENTATION_PLAN.md</code> in the Student-Path project. Figures were measured on 25 Nov 2026 from the catalogue PDF (Stand 13.10.2025), your Docling JSON and data/modules.json. Option scores are design judgments.</p>
+ </div>
+</footer>
+<script>
+{
+const $=id=>document.getElementById(id);
+const still=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const COV=[["frequency",48.3,98.5],["duration",48.3,100],["convenor",48.3,100],["lecturer",48.3,100],["curriculum",48.3,100],["contact hours",48.3,100],["workload",48.3,100],["ECTS",35.3,99],["prereq formal",47.8,99],["prereq recommended",47.3,99],["applicability",48.3,99.5],["learning outcomes",47.3,98.5],["content",48.3,98],["assessment",48.3,100],["media",48.3,99.5],["literature",47.8,98.5]];
+const fmt=v=>v%1?v.toFixed(1):String(v);
+$('db').innerHTML=COV.map(([f,o,n])=>`<div class="dbr"><span class="lab">${f}</span><div class="trk"><i class="seg" style="left:${o}%;width:${n-o}%"></i><i class="dot o" style="left:${o}%"></i><i class="dot n" style="left:${n}%"></i></div><span class="val">${Math.round(o)} → <b>${fmt(n)}</b></span></div>`).join('');
+
+const QH=["Question type","Example","Handled by","Gate metric"];
+const Q=[["Fact lookup","How many ECTS is Software-Sicherheit?","Entity resolver, then the DuckDB record","Exact match"],["Filtered list","Welche IT-SecRel-Module gibt es im Sommer auf Englisch?","Typed filters on DuckDB, complete set","Set F1 = 1.0"],["Discovery","I like machine learning, what fits my focus?","Hybrid dense + sparse, RRF, rerank, filters","Recall@10, nDCG"],["Comparison","Cryptography vs. Cryptanalysis?","Resolve both, side-by-side table","Field accuracy"],["Regulations","How often can I retake a failed exam?","Heading-aware chunks of pp. 3–4, 17–18","Faithfulness"],["Semester plan","Plan semester 2: 30 ECTS, focus ITS, English only","CP-SAT over records and degree rules","100% valid plans"],["Adjust and audit","I failed Cryptography, what now?","Degree audit, re-solve with fewest changes","Validity, stability"],["Out of scope","When is the System Security exam?","Abstain and point to official channels","Abstention rate"]];
+$('qt').innerHTML=Q.map(r=>`<tr>${r.map((c,i)=>`<td data-l="${QH[i]}">${i?c:`<b>${c}</b>`}</td>`).join('')}</tr>`).join('');
+
+const CR=[["Lookup",15],["Lists",15],["Discovery",15],["Rules",10],["Planning",15],["Trust",10],["Cost",10],["Ease",5],["Transfer",5]];
+const OP=[["Naive RAG","chunk, embed, top-k",[3,1,3,3,1,2,5,5,2]],["Advanced RAG","hybrid, rerank, filters",[4,2,4,4,1,3,4,4,4]],["Text-to-SQL only","LLM writes SQL",[4,5,1,1,2,3,4,3,3]],["GraphRAG","LLM-built graph and summaries",[3,3,4,3,2,3,2,2,3]],["Long context","whole catalogue in the prompt",[4,3,4,4,2,2,1,5,1]],["Structured-first agentic","records, hybrid, router, solver",[5,5,5,4,5,5,3,1,5],1]];
+const score=s=>s.reduce((a,v,i)=>a+v*CR[i][1],0)/5;
+$('mxh').innerHTML=`<tr><th>Approach</th>${CR.map(c=>`<th class="n">${c[0]}<small>× ${c[1]}</small></th>`).join('')}<th class="sc">Score / 100</th></tr>`;
+$('mxb').innerHTML=OP.map(([n,d,s,r])=>`<tr${r?' class="rec"':''}><th scope="row">${n}${r?'<em>recommended</em>':''}<small>${d}</small></th>${s.map(v=>`<td class="n h${v}">${v}</td>`).join('')}<td class="sc"><span><i style="width:${score(s)}%"></i></span><b>${score(s)}</b></td></tr>`).join('');
+
+const PH=[["P0","Foundations","1–2 days",0,2,"Repo, uv environment, tests and Qdrant ready"],["P1","Data foundation v2","5–7 days",2,8,"201/201 records, unique PN, ECTS equal to the overview tables, field accuracy ≥95% on 20 gold modules"],["P2","Eval harness and baselines","3–4 days",7,11,"Per-type scorecards for B0 naive RAG and B1 long context"],["P3","Retrieval layer","4–6 days",10,15,"Resolver ≥0.97, list F1 = 1.0, Recall@10 ≥0.90, search p95 ≤1.5 s on CPU"],["P4","Agent, answers, API","5–7 days",15,21,"Correctness ≥0.85, faithfulness ≥0.90, citation precision ≥0.95, abstention ≥0.90"],["P5","Planner, audit, adjust","4–6 days",20,25,"100% valid plans on 30 scenarios, solve ≤2 s, both sample plans pass the audit"],["P6","Product UI","3–5 days",24,28,"Five student tasks completed without help"],["P7","Hardening and release","3–4 days",28,32,"One-command start, CI eval gate, v1.0 report"],["P8","Stretch","open",32,40,"ColBERT, fine-tuned reranker, local LLM, guarded text-to-SQL"]];
+const D=40;
+$('gt').innerHTML=[0,10,20,30,40].map(t=>`<span style="left:${t/D*100}%">${t?t:'day 0'}</span>`).join('');
+$('gr').innerHTML=PH.map(([k,n,d,a,b,g])=>`<div class="grow"><div class="glab"><b>${k} ${n}</b><span>${d}</span></div><div><div class="gbar"><i class="${k==='P8'?'st':''}" style="left:${a/D*100}%;width:${(b-a)/D*100}%"></i></div><p class="gate"><b>Gate</b> ${g}</p></div></div>`).join('');
+
+const DL=[["CLI wiring, settings, Dockerfiles, CI YAML","Segmentation and field-assembly logic"],["Pydantic boilerplate, fixtures, docstrings","Retrieval, fusion and reranking choices"],["First drafts of prompts and question paraphrases","The CP-SAT model and the rules encoding"],["Report formatting and plots","Metric definitions and gate thresholds"],["Explaining unfamiliar library APIs","Reading 30 random records and every failed eval case"]];
+$('dl').innerHTML=DL.map(([a,b])=>`<tr><td>${a}</td><td><b>${b}</b></td></tr>`).join('');
+
+const BUILD=[["Catalogue PDF","603 pages, digital"],["Segment","bookmarks → 201"],["Docling","OCR off, page refs"],["Fields + clean","17 label anchors"],["Gemini normalize","schema + grounding"],["Validate","data contract, QA"]];
+const KNOW=[["DuckDB","module records"],["Qdrant","dense + sparse"],["Prereq graph","recommended skills"],["Degree rules","YAML, pp. 17–18"]];
+const ASK=[["Student","chat + planner UI"],["FastAPI","streams answers"],["LangGraph router","8 intents"],["Tools","typed, read-only"],["Gemini answer","cited, DE or EN"],["Verify","numbers vs records"]];
+const HOT=new Set(["Segment","Tools"]);
+let aw=0;
+const drawArch=()=>{
+ const el=$('arch'),W=Math.round(el.clientWidth);
+ if(!W||W===aw)return;
+ aw=W;
+ const c=W>=1100?6:W>=560?3:W>=350?2:1,cs=c===6?4:c===1?1:2,pad=16,gx=c===1?0:c===2?20:26,gy=26,bh=50,hd=38,gap=46;
+ let y=0,bg='',mid='',top='';
+ const zone=(cls,title,items,cols,chain,extra)=>{
+  const rows=Math.ceil(items.length/cols),bw=(W-2*pad-(cols-1)*gx)/cols,h=hd+rows*bh+(rows-1)*gy+pad+extra;
+  bg+=`<rect class="${cls}" x="0" y="${y}" width="${W}" height="${h}" rx="8"/><text class="zt" x="${pad}" y="${y+25}">${title}</text>`;
+  const P=items.map((it,i)=>{const r=Math.floor(i/cols);let k=i%cols;if(chain&&r%2)k=cols-1-k;return{x:pad+k*(bw+gx),y:y+hd+r*(bh+gy),w:bw,r,t:it[0],u:it[1]}});
+  if(chain)for(let i=0;i<P.length-1;i++){
+   const a=P[i],b=P[i+1];
+   if(a.r===b.r){const d=b.x>a.x?1:-1,x1=d>0?a.x+a.w:a.x,x2=d>0?b.x:b.x+b.w;mid+=`<line class="ar" x1="${x1+2*d}" y1="${a.y+bh/2}" x2="${x2-3*d}" y2="${a.y+bh/2}" marker-end="url(#ah)"/>`}
+   else{const x=a.x+a.w/2;mid+=`<line class="ar" x1="${x}" y1="${a.y+bh+2}" x2="${x}" y2="${b.y-3}" marker-end="url(#ah)"/>`}
+  }
+  P.forEach(p=>{const h=HOT.has(p.t)?' hot':'';top+=`<rect class="box${h}" x="${p.x}" y="${p.y}" width="${p.w}" height="${bh}" rx="6"/><text class="bt${h}" x="${p.x+p.w/2}" y="${p.y+21}">${p.t}</text><text class="bs" x="${p.x+p.w/2}" y="${p.y+39}">${p.u}</text>`});
+  const z={top:y,h,P};
+  y+=h;
+  return z;
+ };
+ const zb=zone('zb','Build time · once per catalogue version',BUILD,c,true,0);
+ y+=gap;
+ const zk=zone('zk','Knowledge layer',KNOW,cs,false,0);
+ y+=gap;
+ const za=zone('za','Ask time · every question',ASK,c,true,c===6?36:c===3?0:14);
+ const mx=Math.round(W/2);
+ mid+=`<line class="ar" x1="${mx}" y1="${zb.top+zb.h+3}" x2="${mx}" y2="${zk.top-3}" marker-end="url(#ah)"/><text class="al" x="${mx+10}" y="${zb.top+zb.h+gap/2+4}">writes records + vectors</text>`;
+ mid+=`<line class="ar" x1="${mx}" y1="${za.top-3}" x2="${mx}" y2="${zk.top+zk.h+3}" marker-end="url(#ah)"/><text class="al" x="${mx+10}" y="${zk.top+zk.h+gap/2+4}">tools read</text>`;
+ const A=za.P,f=A[0],l=A[A.length-1],fc=f.x+f.w/2,lc=l.x+l.w/2;
+ let ret,tail;
+ if(f.r===l.r){const yb=l.y+bh+16;ret=`M${lc} ${l.y+bh+2}V${yb}H${fc}V${f.y+bh+4}`;tail=`V${yb}H${fc}V${f.y+bh/2}`;mid+=`<text class="al" x="${(fc+lc)/2}" y="${yb+17}" text-anchor="middle">answer + citations back to the student</text>`}
+ else if(c===3){ret=`M${lc} ${l.y-2}V${f.y+bh+4}`;tail=`V${f.y+bh/2}`;mid+=`<text class="al" x="${lc+8}" y="${f.y+bh+gy/2+4}">answer + citations</text>`}
+ else{const yb=l.y+bh+12;ret=`M${lc} ${l.y+bh+2}V${yb}H6V${f.y+bh/2}H${f.x-3}`;tail=`V${yb}H6V${f.y+bh/2}H${fc}`}
+ mid+=`<path class="ar" d="${ret}" marker-end="url(#ah)"/>`;
+ const tp='M'+A.map(p=>`${p.x+p.w/2} ${p.y+bh/2}`).join('L')+tail;
+ const tok=still?'':`<circle class="tok" r="6"><animateMotion dur="9s" repeatCount="indefinite" path="${tp}"/></circle>`;
+ const H=Math.ceil(y+2);
+ el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Architecture: build time turns the PDF into validated records in DuckDB, Qdrant, a prerequisite graph and degree rules; at ask time a router sends each question to typed tools that read them, Gemini answers with citations and a verifier checks numbers"><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>${bg}${mid}${tok}${top}</svg>`;
+};
+
+const MM=[["Understand the data",["Profile before parsing","Find hidden structure","Count the truth: 201","Map question types"]],["Extract &amp; validate",["Bookmarks → modules","17 label anchors","De-hyphenate, repair","Gemini → typed schema","Data contract tests"]],["Knowledge model",["PN as primary key","DuckDB records","Qdrant multi-view","Prereq graph","Rules as YAML"]],["Retrieval",["Entity resolution","Typed filters","Dense + sparse + RRF","Rerank top 15","Regulation chunks"]],["Reasoning",["LangGraph router","Read-only tools","CP-SAT planner","Degree audit","Number verifier"]],["Answers &amp; UX",["Cite PN + page","Abstain when unsure","Reply in DE or EN","Cards, tables, plans","Feedback buttons"]],["Evaluation",["Golden set by type","Metrics per layer","Beat 2 baselines","Ablation log","CI regression gate"]],["Engineering &amp; ops",["uv, ruff, pytest","Prompts as files","Docker Compose","Langfuse traces","Versioned re-ingest"]],["AI-assisted workflow",["CLAUDE.md + context/","Test first, then ask","You write the core","AI labels, you verify","Review every diff"]]];
+let mw=0;
+const drawMM=()=>{
+ const el=$('mm'),W=Math.round(el.clientWidth);
+ if(!W||W===mw)return;
+ mw=W;
+ const pad=16,lh=21,bh=34,gap=20,L=MM.slice(0,5),R=MM.slice(5);
+ const isAI=b=>b[0].startsWith('AI');
+ const box=(x,y,w,b)=>`<rect class="mb${isAI(b)?' ai':''}" x="${x}" y="${y}" width="${w}" height="${bh}" rx="5"/><text class="mbt" x="${x+w/2}" y="${y+22}">${b[0]}</text>`;
+ const leaf=(x,y,t,left,ai)=>`<circle class="md${ai?' ai':''}" cx="${x}" cy="${y}" r="2.6"/><text class="ml" x="${left?x-8:x+8}" y="${y+4.5}"${left?' text-anchor="end"':''}>${t}</text>`;
+ let s='',H;
+ if(W>=600){
+  const beside=W>=1100,rw=beside?150:Math.min(150,Math.max(112,W*.14)),rh=60,cor=beside?Math.min(80,W*.06):Math.max(30,Math.min(70,W*.05));
+  const sw=(W-2*pad-rw-2*cor)/2,bw=beside?190:Math.min(sw,210);
+  const bk=b=>beside?Math.max(bh,b[1].length*lh):bh+8+b[1].length*lh;
+  const cH=a=>a.reduce((h,b)=>h+bk(b),0)+(a.length-1)*gap;
+  H=Math.max(cH(L),cH(R))+2*pad;
+  const rx=(W-rw)/2;
+  const col=(arr,left)=>{
+   let y=pad+(H-2*pad-cH(arr))/2;
+   arr.forEach((b,i)=>{
+    const h=bk(b),bx=left?pad+sw-bw:W-pad-sw,by=beside?y+(h-bh)/2:y,ai=isAI(b);
+    const x0=left?rx:rx+rw,y0=H/2+(i-(arr.length-1)/2)*8,x1=left?bx+bw:bx,y1=by+bh/2,xm=(x0+x1)/2;
+    s+=`<path class="mc" d="M${x0} ${y0}C${xm} ${y0} ${xm} ${y1} ${x1} ${y1}"/>`;
+    b[1].forEach((t,j)=>{
+     if(beside){
+      const ly=y+(h-b[1].length*lh)/2+j*lh+lh/2,ox=left?bx:bx+bw,dx=left?bx-26:bx+bw+26,cx=(ox+dx)/2;
+      s+=`<path class="mc" d="M${ox} ${y1}C${cx} ${y1} ${cx} ${ly} ${dx} ${ly}"/>`+leaf(dx,ly,t,left,ai);
+     }else{
+      const ly=y+bh+8+j*lh+lh/2;
+      s+=leaf(left?bx+bw-6:bx+6,ly,t,left,ai);
+     }
+    });
+    s+=box(bx,by,bw,b);
+    y+=h+gap;
+   });
+  };
+  col(L,true);
+  col(R,false);
+  s+=`<rect class="mr" x="${rx}" y="${H/2-rh/2}" width="${rw}" height="${rh}" rx="8"/><text class="mrt" x="${W/2}" y="${H/2-2}">Student-Path</text><text class="mrs" x="${W/2}" y="${H/2+17}">expert build map</text>`;
+ }else{
+  const rw=Math.min(W-2*pad,240),sx=pad+14,bx=pad+30,bw=Math.min(W-bx-pad,250);
+  let y=pad+52+18,last=y,body='';
+  MM.forEach(b=>{
+   body+=`<path class="mc" d="M${sx} ${y+bh/2}H${bx}"/>`+box(bx,y,bw,b);
+   last=y+bh/2;
+   b[1].forEach((t,j)=>{body+=leaf(bx+8,y+bh+8+j*lh+lh/2,t,false,isAI(b))});
+   y+=bh+8+b[1].length*lh+gap;
+  });
+  s=`<path class="mc" d="M${sx} ${pad+52}V${last}"/><rect class="mr" x="${pad}" y="${pad}" width="${rw}" height="52" rx="8"/><text class="mrt" x="${pad+rw/2}" y="${pad+24}">Student-Path</text><text class="mrs" x="${pad+rw/2}" y="${pad+42}">expert build map</text>`+body;
+  H=y-gap+pad;
+ }
+ el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Mindmap with nine branches: understand the data, extract and validate, knowledge model, retrieval, reasoning, answers and UX, evaluation, engineering and ops, AI-assisted workflow">${s}</svg>`;
+};
+
+const roA=new ResizeObserver(drawArch);
+roA.observe($('arch'));
+const roM=new ResizeObserver(drawMM);
+roM.observe($('mm'));
+}
+</script>
+</body>
+</html>

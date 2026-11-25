@@ -1,0 +1,28 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Secrets: real keys live in .env, which is never committed (.env.example is the template)
+.env
+.env.*
+!.env.example
+
+# Generated data: rebuilt by the pipeline (context/IMPLEMENTATION_PLAN.md, phase P1)
+data/raw/
+data/interim/
+data/processed/
+data/qdrant/
+data/modules.json
+*.sqlite
+
+# Private reference material (enterprise project), kept out of the public repo
+RAG_system_technical_guildline.md
+
+# OS files
+Thumbs.db
+.DS_Store
