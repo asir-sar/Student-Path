@@ -1,124 +1,131 @@
-# Roadmap
+# Roadmap (v2)
 
-Progress tracker for each phase. Check off tasks as they are completed.
+Progress tracker for the v2 plan. Details, code skeletons and the reasoning behind every gate are in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) §7; decisions are in [ARCHITECTURE.md](ARCHITECTURE.md). Check off tasks as they are completed, and log results in [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md).
 
----
-
-## Phase 1: Data Foundation 🟡 IN PROGRESS
-
-> **Goal:** Extract, parse, and structure all modules from the PDF into clean JSON with validated metadata.
-
-- [ ] **1.1** Install Docling and run it on `Modulkatalog-Master-Informatik.pdf`
-- [ ] **1.2** Inspect Docling output — verify table extraction quality on 5-10 sample modules
-- [ ] **1.3** Build the module normalizer script (`src/ingestion/normalizer.py`)
-  - Extract structured fields from Docling's markdown output
-  - Map to the defined metadata schema (ADR-003)
-  - Handle bilingual content separation (DE/EN)
-  - Handle edge cases: multi-line values, hyphenation, missing fields
-- [ ] **1.4** Run normalizer on full catalogue → `data/modules.json`
-- [ ] **1.5** Quality check: inspect 20-30 random modules for parsing errors
-- [ ] **1.6** Write 15-20 test questions with expected answers → `data/test_questions.json`
-
-**Deliverable:** `data/modules.json` — complete structured dataset of all ~200-300 modules
+> The v1 roadmap (one chunk per module, `module_id` as key, regex normalizer) was replaced on 2026-11-25 after the data audit. Its code lives in `src/student_path/legacy/` and serves only as a comparison baseline.
 
 ---
 
-## Phase 2: Ingestion Pipeline ⬜ NOT STARTED
+## Phase 0: Foundations 🟡 IN PROGRESS
 
-> **Goal:** Embed all modules and index them in Qdrant with metadata, ready for hybrid search.
+> **Goal:** a professional skeleton, so every later step is fast to run, test and undo.
 
-- [ ] **2.1** Set up Qdrant (local Docker or Qdrant Cloud free tier)
-- [ ] **2.2** Implement BGE-M3 embedding generation (`src/ingestion/embedder.py`)
-  - Dense vectors for semantic search
-  - Sparse vectors for keyword search (module IDs, exact terms)
-- [ ] **2.3** Build the ingestion script (`src/ingestion/ingest.py`)
-  - Read `data/modules.json`
-  - Generate embeddings per module
-  - Upsert to Qdrant with full metadata payload
-- [ ] **2.4** Verify: run raw Qdrant queries to confirm data is searchable
-- [ ] **2.5** Test hybrid search (dense + sparse) with sample queries
+- [x] **P0.1** git, `.gitignore`, public GitHub repo
+- [x] **P0.2** uv: `pyproject.toml`, `uv.lock`, dependency groups, CPU-only torch
+- [x] **P0.3** package layout `src/student_path/`, `sp` CLI, v1 code isolated in `legacy/`, PDF in `data/source/`
+- [x] **P0.4** typed settings (`student_path/settings.py`) and matching `.env.example`
+- [ ] **P0.5** pre-commit (ruff lint + format), pyright, pytest wired in
+- [ ] **P0.6** `docker-compose.yml` with Qdrant (pinned tag); embedded mode stays the default for development
+- [ ] **P0.7** `CLAUDE.md` / `AGENTS.md`: commands, layout, conventions, "never" list
 
-**Deliverable:** Populated Qdrant collection with all modules, queryable via API
+**Gate:** `uv run pytest` passes · `uv run sp --help` works · CI-ready checks run locally
 
 ---
 
-## Phase 3: Search, Agent & Chat ⬜ NOT STARTED
+## Phase 1: Data foundation v2 ⬜
 
-> **Goal:** Build the retrieval pipeline and LLM-powered chat that answers student questions with source references.
+> **Goal:** 201 validated, typed module records and a QA report you trust.
 
-- [ ] **3.1** Implement hybrid search function (`src/search/retriever.py`)
-  - Combined dense + sparse scoring
-  - Metadata filtering (semester, ECTS, language, focus area)
-- [ ] **3.2** Add reranker (bge-reranker-v2-m3) (`src/search/reranker.py`)
-- [ ] **3.3** Build the LangGraph agent (`src/agent/agent.py`)
-  - Intent classification (lookup / recommend / plan / compare)
-  - Tool definitions for Qdrant search
-  - System prompt for course recommendation context
-- [ ] **3.4** Wire up LLM (OpenAI or Gemini API)
-- [ ] **3.5** Build FastAPI backend (`src/api/main.py`)
-  - `/chat` endpoint
-  - `/search` endpoint (for debugging)
-- [ ] **3.6** Evaluate quality with test questions (Ragas or manual scoring)
+- [ ] **P1.1** Probe: manifest with SHA-256, page count, text-layer check, bookmark count
+- [ ] **P1.2** Re-run Docling once: OCR off, TableFormer `ACCURATE`, cell matching; cache `data/interim/docling.json`
+- [ ] **P1.3** Segment modules by PDF bookmarks (201 page ranges, PN as key) + tests
+- [ ] **P1.4** Field assembly with the 17 label anchors (field carried across tables and pages)
+- [ ] **P1.5** Clean: NFKC, corpus-aware de-hyphenation (2,124 artifacts → fewer than 20)
+- [ ] **P1.6** Page-break bleed repair (heuristic first, LLM returns offsets only)
+- [ ] **P1.7** Rule-based typing (ECTS, SWS, workload, offering, languages, groups, people)
+- [ ] **P1.8** Gemini normalization with schema + grounding check, cached
+- [ ] **P1.9** Entity linking of prerequisites → PN; prerequisite graph
+- [ ] **P1.10** Reconcile with the overview tables (pp. 5–16)
+- [ ] **P1.11** Data-contract tests (201 records, unique PN, ECTS = overview, no artifacts)
+- [ ] **P1.12** QA report, read 30 modules against the PDF, hand-label 20 gold modules
 
-**Deliverable:** Working API that answers course questions with sources
-
----
-
-## Phase 4: Frontend & Polish ⬜ NOT STARTED
-
-> **Goal:** User-facing interface and quality improvements.
-
-- [ ] **4.1** Build web UI (Streamlit MVP or React)
-  - Chat interface
-  - Filter sidebar (semester, ECTS, language)
-  - Source reference display (module ID, name, page)
-- [ ] **4.2** Semester planning feature
-  - Multi-course selection with ECTS running total
-  - Prerequisite checking
-- [ ] **4.3** Quality polish
-  - Run Ragas evaluation, document scores
-  - Tune prompts and retrieval parameters
-- [ ] **4.4** Document lessons learned for enterprise project transfer
-
-**Deliverable:** Complete working prototype + documented learnings
+**Gate:** 201/201 records · unique PN · ≥99% core-field fill · ECTS equals the overview tables · field accuracy ≥95% on the gold set
 
 ---
 
-## Target Directory Structure
+## Phase 2: Evaluation harness and baselines ⬜
 
-```
-Student-Path/
-├── context/                    # Project tracking (you are here)
-│   ├── PROJECT.md
-│   ├── ARCHITECTURE.md
-│   ├── DEVELOPMENT_LOG.md
-│   └── ROADMAP.md
-├── data/
-│   ├── raw/                    # Docling output (intermediate)
-│   ├── modules.json            # Final structured module data
-│   └── test_questions.json     # Evaluation questions
-├── src/
-│   ├── ingestion/
-│   │   ├── parser.py           # Docling PDF parsing
-│   │   ├── normalizer.py       # Structured JSON extraction
-│   │   ├── embedder.py         # BGE-M3 embedding generation
-│   │   └── ingest.py           # Qdrant indexing
-│   ├── search/
-│   │   ├── retriever.py        # Hybrid search
-│   │   └── reranker.py         # Result reranking
-│   ├── agent/
-│   │   └── agent.py            # LangGraph agent
-│   └── api/
-│       └── main.py             # FastAPI endpoints
-├── frontend/                   # Web UI
-├── tests/                      # Unit + integration tests
-├── .env.example                # API keys template
-├── requirements.txt
-├── Modulkatalog-Master-Informatik.pdf
-└── README.md
-```
+- [ ] **P2.1** Golden-set format (`eval/datasets/golden.jsonl`)
+- [ ] **P2.2** ~80 programmatic questions from DuckDB (exact answers), paraphrased, about half in German
+- [ ] **P2.3** ~70 hand-written: regulations, discovery (graded), planning, out-of-scope; migrate `data/test_questions.json` to PN keys
+- [ ] **P2.4** Freeze dev/test split (70/30)
+- [ ] **P2.5** Metrics module (EM, set F1, Recall@k, MRR, nDCG, faithfulness, citations, abstention, latency, cost)
+- [ ] **P2.6** Calibrate the LLM judge against 30 own labels (≥85% agreement)
+- [ ] **P2.7** Baselines B0 (naive RAG) and B1 (long-context Gemini); `sp eval`
+
+**Gate:** per-type scorecards for B0 and B1 recorded in the development log
 
 ---
 
-*Last updated: 2026-10-10*  
-*Current phase: 1 — Data Foundation*
+## Phase 3: Retrieval layer ⬜
+
+- [ ] **P3.1** DuckDB store + parametrized `filter_modules`
+- [ ] **P3.2** Entity resolver (PN, IDs incl. 5851/5853 ambiguity, DE/EN titles, typos)
+- [ ] **P3.3** Views (`card`, `content_en/de`, `outcomes_en/de`) + BGE-M3 dense and sparse, cached
+- [ ] **P3.4** Qdrant collection, payload indexes, versioned collection + alias
+- [ ] **P3.5** Hybrid query (prefetch + RRF + group by PN)
+- [ ] **P3.6** Reranker with CPU latency budget
+- [ ] **P3.7** Regulations index (HybridChunker)
+- [ ] **P3.8** Filter extraction (self-query) with validated enums
+- [ ] **P3.9** Experiments E2, E3, E6
+
+**Gate:** resolver ≥0.97 · list F1 = 1.0 · Recall@10 ≥0.90 · nDCG@10 ≥ B0 + 0.15 · search p95 ≤1.5 s
+
+---
+
+## Phase 4: Agent, generation and API ⬜
+
+- [ ] **P4.1** Chat state and LangGraph graph (contextualize → route → tools → generate → verify)
+- [ ] **P4.2** Router with structured output (8 intents, clarification)
+- [ ] **P4.3** Typed read-only tools
+- [ ] **P4.4** Prompts as versioned files; citations `[title · PN · p. X]`; abstention
+- [ ] **P4.5** Number verifier
+- [ ] **P4.6** FastAPI (SSE chat, module, search, plan, audit, feedback, PDF page links)
+- [ ] **P4.7** Langfuse tracing
+
+**Gate:** correctness ≥0.85 · faithfulness ≥0.90 · citation precision ≥0.95 · abstention ≥0.90 · p95 ≤6 s
+
+---
+
+## Phase 5: Planner, degree audit and adjustment ⬜
+
+- [ ] **P5.1** `config/degree_rules.yaml` (pp. 17–18) + tests against the sample plans (pp. 20–21)
+- [ ] **P5.2** Student profile model
+- [ ] **P5.3** Degree audit ("what do I still need?")
+- [ ] **P5.4** CP-SAT planner
+- [ ] **P5.5** Adjustment as re-solve with fewest changes, with a diff
+- [ ] **P5.6** Natural language → `PlanRequest` and plan explanations
+
+**Gate:** 100% valid plans on 30 scenarios (Hypothesis) · solve ≤2 s · both sample plans pass the audit
+
+---
+
+## Phase 6: Product UI ⬜
+
+- [ ] **P6.1** Decide Chainlit vs. Streamlit; add the `ui` dependency group
+- [ ] **P6.2** Chat with module cards, comparison tables, planner board, profile panel, feedback
+- [ ] **P6.3** Usability test with 3–5 students
+
+**Gate:** five student tasks completed without help
+
+---
+
+## Phase 7: Hardening and release ⬜
+
+- [ ] **P7.1** Docker Compose for the full stack
+- [ ] **P7.2** GitHub Actions CI with eval regression gate
+- [ ] **P7.3** New-catalogue re-ingestion with "what changed" report
+- [ ] **P7.4** Budgets, caching, security and privacy checks
+- [ ] **P7.5** README results table, demo, tag `v1.0`; delete `legacy/` once E1 is recorded
+
+**Gate:** one-command start · CI green · eval report attached to the release
+
+---
+
+## Phase 8: Stretch ⬜
+
+ColBERT late interaction · fine-tuned reranker or embeddings · guarded text-to-SQL · local LLM via vLLM/Ollama · prerequisite graph explorer · Baukasten image via VLM · multi-catalogue support.
+
+---
+
+*Last updated: 2026-11-25 · Current phase: 0 — Foundations*

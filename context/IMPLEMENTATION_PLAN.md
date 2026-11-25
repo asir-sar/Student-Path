@@ -6,7 +6,7 @@
 |---|---|
 | Status | **Proposed** (2026-11-25). Once accepted, it revises ADR-002 and ADR-003 in [ARCHITECTURE.md](ARCHITECTURE.md) and replaces the phases in [ROADMAP.md](ROADMAP.md) |
 | Visual companion | Architecture, evidence, approach scores, roadmap and mindmap: https://claude.ai/artifact/8uqJCGV3eCWAnEfdXHssPk (offline copy: [blueprint.html](blueprint.html)) |
-| Evidence base | Measured on 2026-11-25 against `Modulkatalog-Master-Informatik.pdf` (Stand 13.10.2025), `data/raw/modulkatalog_docling.json` and `data/modules.json` |
+| Evidence base | Measured on 2026-11-25 against `Modulkatalog-Master-Informatik.pdf` (Stand 13.10.2025), `data/raw/modulkatalog_docling.json` and `data/modules.json` (both moved to `data/legacy/` in P0.3) |
 | LLM | Google Gemini (your decision, kept). Every other component is open source and runs locally on CPU |
 
 ## Contents
@@ -48,12 +48,12 @@
 
 | # | Finding | Evidence | Consequence |
 |---|---|---|---|
-| F1 | The PDF is digital, not scanned | All 603 pages have a text layer (pypdfium2) | Set `do_ocr=False`: Docling's default is `True` ([parser.py:45](../src/ingestion/parser.py#L45)). Runs are faster and OCR noise disappears |
+| F1 | The PDF is digital, not scanned | All 603 pages have a text layer (pypdfium2) | Set `do_ocr=False`: Docling's default is `True` ([legacy/parser.py:40](../src/student_path/legacy/parser.py#L40)). Runs are faster and OCR noise disappears |
 | F2 | The PDF has a usable outline | 204 bookmarks. All 188 bookmarks with a 4-digit module ID point to the page where that module starts. Modules span 2–6 pages (median 3) | Segment modules by bookmark page ranges. This is deterministic and needs no regex boundary detection |
 | F3 | There are exactly 201 modules | 201 bookmarks carry an exam number (PN); all 201 PNs are unique. One of them is the placeholder `xxxxxx` | Data contract: exactly 201 records |
 | F4 | `module_id` is not a key | `5851` names both Software Process Engineering and Program Repair. `5853` names both Empirical Methods for SE and Programming Paradigms. 13 modules have no 4-digit ID (seminars, internship, thesis, 4 external modules) | **Primary key = PN.** With `module_id` as the Qdrant point ID, one module would silently overwrite another |
 | F5 | The current `modules.json` is about half empty, and some records are merged | 271 records for 201 modules: table-of-contents rows became empty "ghost" records, and 85 IDs appear twice. A real module has a given field filled only about 48% of the time. ECTS is present and correct for 32.8%. Record "5670" contains text from 5710 and later modules. Values contain `-----` separator runs | Rebuild the normalizer (Phase 1) |
-| F6 | Root causes of F5 | (a) TOC rows such as `\| 5487 \| AI-Driven … \|` match the new-module test `^\d{3,}$` ([normalizer.py:219](../src/ingestion/normalizer.py#L219)). (b) Some header rows merge ID and title (`5710 Algorithmische … PN 455414`), so the test misses them and modules glue together. (c) Tables split at page breaks, and continuation rows have an empty label cell. (d) Docling repeats spanned cells, giving 4 columns instead of 2. (e) `language` defaults to `["de"]` when it is missing ([normalizer.py:138](../src/ingestion/normalizer.py#L138)), which hides gaps. (f) `--pages` is parsed but never passed to `convert()` ([parser.py:57](../src/ingestion/parser.py#L57)) | Fix the segmentation, not the parser |
+| F6 | Root causes of F5 | (a) TOC rows such as `\| 5487 \| AI-Driven … \|` match the new-module test `^\d{3,}$` ([legacy/normalizer.py:215](../src/student_path/legacy/normalizer.py#L215)). (b) Some header rows merge ID and title (`5710 Algorithmische … PN 455414`), so the test misses them and modules glue together. (c) Tables split at page breaks, and continuation rows have an empty label cell. (d) Docling repeats spanned cells, giving 4 columns instead of 2. (e) `language` defaults to `["de"]` when it is missing ([legacy/normalizer.py:134](../src/student_path/legacy/normalizer.py#L134)), which hides gaps. (f) `--pages` is parsed but never passed to `convert()` (fixed in P0.3) | Fix the segmentation, not the parser |
 | F7 | Spike: same Docling JSON, new segmentation | Bookmark page ranges plus label anchors: 16 comparable fields are 98–100% filled; ECTS is a clean integer for 97.5% | The approach was validated before committing to it |
 | F8 | What is still dirty | 50 `content` values start with a page-break fragment ("mic principles to practical requirements." is the tail of the learning outcomes). Also 11 `assessment` and 3 `literature` values. 2,124 hyphenation artifacts ("Nach- bearbeitung", "analy- sis"). German and English are interleaved in one value ("Keine None", "Jedes Sommersemester Every summer semester") | Add clean and normalize stages with grounding checks |
 | F9 | The catalogue states its own rules | p. 17: ≥120 ECTS in total; ≥40 ECTS in one focus group (AlgMath, ProgSoft, InfKomm, ITS, IT-SecRel); ≥30 ECTS from the other focus groups plus General Area; compulsory Seminar 5 + Master's Thesis 27 + Presentation 3. p. 18: ≥20 ECTS by the end of semester 1, otherwise ≥30 by the end of semester 2 | Hand-encode them as `degree_rules.yaml`. The planner is a constraint solver |
@@ -207,7 +207,7 @@ flowchart LR
 | Planner | OR-Tools CP-SAT | Exact constraint satisfaction and optimization in milliseconds | LLM planning (invalid plans), PuLP ILP (also fine) |
 | API / UI | FastAPI (SSE) + Chainlit or Streamlit | Streaming chat, step display, feedback buttons | React (later) |
 | Eval & observability | Own metrics + selected Ragas metrics + Langfuse | Per-layer metrics, traces, feedback scores | Arize Phoenix (lighter local option) |
-| Tooling | uv, ruff, pyright, pytest + Hypothesis, pre-commit, Docker Compose, Typer CLI | Reproducible, fast feedback | `pip` + `requirements.txt` (current) |
+| Tooling | uv, ruff, pyright, pytest + Hypothesis, pre-commit, Docker Compose, Typer CLI | Reproducible, fast feedback | `pip` + `requirements.txt` (used before P0.2) |
 
 ### 5.2 Decisions (proposed ADRs; append them to ARCHITECTURE.md when accepted)
 
@@ -403,7 +403,7 @@ Each phase has a goal, steps, the key code shape, pitfalls, a **Definition of Do
    explicit = true
    ```
 
-3. Layout: move `src/ingestion/` into a package and keep `context/`.
+3. Layout: move `src/ingestion/` into a package and keep `context/`. *(Done 2026-11-25: package, `sp` CLI, typed settings, PDF moved to `data/source/`. The v1 code is isolated in `student_path/legacy/` (`sp legacy parse|normalize`) and its outputs in `data/legacy/`; it is only the experiment E1 baseline. `student_path.ingestion` is reserved for the v2 pipeline (P1). Add the other subpackages and folders when their phase starts, not as empty stubs.)*
 
    ```
    src/student_path/
@@ -415,13 +415,14 @@ Each phase has a goal, steps, the key code shape, pitfalls, a **Definition of Do
      agent/       state.py, graph.py, nodes.py, tools.py
      api/         main.py
      cli.py       # Typer: sp ingest | sp index | sp eval | sp serve
-   config/        settings.py (pydantic-settings), degree_rules.yaml, prompts/*.md
+     settings.py  # pydantic-settings (code must live in the package to be importable)
+   config/        degree_rules.yaml, prompts/*.md
    data/          source/  interim/  processed/  gold/
    eval/          datasets/  baselines/  metrics.py  run_eval.py  reports/
    tests/
    ```
 
-4. `config/settings.py` with pydantic-settings reading `.env`. Extend `.env.example` with `GEMINI_FAST_MODEL`, `GEMINI_SMART_MODEL` (pin exact model versions for reproducible evals; aliases drift), `QDRANT_PATH=data/qdrant` (embedded) or `QDRANT_URL`, and the `LANGFUSE_*` keys.
+4. `src/student_path/settings.py` with pydantic-settings reading `.env` *(done in P0.3)*. Extend `.env.example` with `GEMINI_FAST_MODEL`, `GEMINI_SMART_MODEL` (pin exact model versions for reproducible evals; aliases drift), `QDRANT_PATH=data/qdrant` (embedded) or `QDRANT_URL`, and the `LANGFUSE_*` keys.
 5. Pre-commit with ruff (lint + format). Add pytest with one smoke test, and pyright in basic mode.
 6. `docker-compose.yml` with `qdrant/qdrant` (pin a version tag). Start with embedded Qdrant (`QdrantClient(path=...)`) and switch to the server in P7.
 7. Write a `CLAUDE.md` (or `AGENTS.md`) of at most 100 lines: purpose, commands, layout, conventions and a "never" list (see §9).

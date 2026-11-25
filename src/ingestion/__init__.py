@@ -1,1 +1,0 @@
-# Student-Path ingestion package

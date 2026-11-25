@@ -1,3 +1,8 @@
+"""LEGACY: the earlier pipe-table regex parser (formerly test.py at the project root).
+
+Superseded; kept for reference (ADR-001). See student_path/legacy/__init__.py.
+"""
+
 import re
 import json
 import argparse

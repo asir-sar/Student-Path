@@ -1,34 +1,29 @@
 """
-Phase 1, Task 1.1-1.2: Parse the Modulkatalog PDF using Docling.
+LEGACY v1 parser (superseded, see student_path/legacy/__init__.py).
 
-Converts the PDF into structured Markdown, preserving tables and headings.
-Outputs the raw Docling result for inspection before normalization.
+Parse the Modulkatalog PDF using Docling.
 
-Usage:
-    python src/ingestion/parser.py
-    python src/ingestion/parser.py --pdf path/to/other.pdf
-    python src/ingestion/parser.py --pages 0-10    # Parse only first 10 pages (for testing)
+Converts the PDF into structured Markdown, preserving tables and headings,
+and saves the raw Docling result for inspection before normalization.
+
+Usage (see `uv run sp legacy parse --help`):
+    uv run sp legacy parse
+    uv run sp legacy parse --pdf path/to/other.pdf
+    uv run sp legacy parse --pages 1-10    # first 10 pages only (for testing)
 """
 
-import argparse
-import os
-import sys
 import json
-from pathlib import Path
-
-# Add project root to path
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+import os
 
 
-def parse_pdf(pdf_path: str, output_dir: str, page_range: str = None) -> str:
+def parse_pdf(pdf_path: str, output_dir: str, page_range: tuple[int, int] | None = None) -> str:
     """
     Parse a PDF using Docling and save the structured Markdown output.
 
     Args:
         pdf_path: Path to the PDF file
         output_dir: Directory to save output files
-        page_range: Optional page range like "0-10" (0-indexed)
+        page_range: Optional (first, last) page numbers, 1-based and inclusive
 
     Returns:
         Path to the saved Markdown file
@@ -53,8 +48,12 @@ def parse_pdf(pdf_path: str, output_dir: str, page_range: str = None) -> str:
 
     print("[2/4] Running Docling conversion (this may take several minutes for 600+ pages)...")
 
-    # Convert the PDF
-    result = converter.convert(pdf_path)
+    # Convert the PDF (optionally only a page range)
+    if page_range:
+        print(f"       Pages: {page_range[0]}-{page_range[1]}")
+        result = converter.convert(pdf_path, page_range=page_range)
+    else:
+        result = converter.convert(pdf_path)
     doc = result.document
 
     # Create output directory
@@ -81,7 +80,7 @@ def parse_pdf(pdf_path: str, output_dir: str, page_range: str = None) -> str:
     print(f"  Tables detected: {tables_found}")
     print(f"  Markdown length: {len(markdown_content):,} characters")
     print(f"\nNext step: Inspect {md_output_path} to verify table extraction quality,")
-    print(f"then run: python src/ingestion/normalizer.py")
+    print("then run: uv run sp legacy normalize")
 
     return md_output_path
 
@@ -128,38 +127,3 @@ def quick_inspect(output_dir: str, num_samples: int = 3):
         if len(block_lines) > 20:
             print(f"  ... ({len(block_lines) - 20} more lines)")
         print()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Parse Modulkatalog PDF using Docling"
-    )
-    parser.add_argument(
-        "--pdf",
-        default=str(PROJECT_ROOT / "Modulkatalog-Master-Informatik.pdf"),
-        help="Path to the PDF file",
-    )
-    parser.add_argument(
-        "--output-dir",
-        default=str(PROJECT_ROOT / "data" / "raw"),
-        help="Directory for output files",
-    )
-    parser.add_argument(
-        "--pages",
-        default=None,
-        help="Page range to parse, e.g. '0-10' (0-indexed). Omit for full PDF.",
-    )
-    parser.add_argument(
-        "--inspect",
-        action="store_true",
-        help="After parsing, print sample table blocks for quick inspection",
-    )
-
-    args = parser.parse_args()
-
-    # Parse the PDF
-    md_path = parse_pdf(args.pdf, args.output_dir, args.pages)
-
-    # Optional quick inspection
-    if args.inspect:
-        quick_inspect(args.output_dir)

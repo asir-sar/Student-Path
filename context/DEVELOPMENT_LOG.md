@@ -9,7 +9,7 @@ Chronological record of all development activity, decisions, and findings.
 ### What happened
 - Evaluated the enterprise RAG technical guide (kept private, not in this repository) for applicability to the Student-Path Modulkatalog project
 - **Finding:** ~70% of the enterprise architecture transfers directly. Core pipeline (Docling → BGE-M3 → Qdrant → LangGraph → LLM) is identical. Dropped: MySQL, employee knowledge, permissions, GDPR
-- Reviewed existing [test.py](../test.py) — custom regex parser for pipe-delimited markdown tables
+- Reviewed existing [test.py](../src/student_path/legacy/regex_parser.py) — custom regex parser for pipe-delimited markdown tables
 - **Decision:** Replace test.py approach with Docling-based parsing (ADR-001). test.py is too fragile for 600 pages and assumes pre-extracted markdown
 
 ### Artifacts created
@@ -35,10 +35,10 @@ Chronological record of all development activity, decisions, and findings.
 
 ### What happened
 - Created full project directory structure (`src/`, `data/`, `context/`)
-- Built [parser.py](../src/ingestion/parser.py) — Docling-based PDF parser with OCR and table extraction
-- Built [normalizer.py](../src/ingestion/normalizer.py) — transforms Docling output into structured per-module JSON with typed metadata
+- Built [parser.py](../src/student_path/legacy/parser.py) — Docling-based PDF parser with OCR and table extraction
+- Built [normalizer.py](../src/student_path/legacy/normalizer.py) — transforms Docling output into structured per-module JSON with typed metadata
 - Created [test_questions.json](../data/test_questions.json) — 15 test questions across all 4 intent types
-- Set up [requirements.txt](../requirements.txt) and [.env.example](../.env.example)
+- Set up `requirements.txt` (replaced by pyproject.toml in P0.2) and [.env.example](../.env.example)
 - **LLM decision:** Google Gemini (user preference)
 
 ### Artifacts created
@@ -112,6 +112,29 @@ Chronological record of all development activity, decisions, and findings.
 
 ### Next steps
 - P0.3: move `src/ingestion/` into `src/student_path/`, add the Typer CLI (`sp`) and config/settings.
+
+---
+
+## 2026-11-25 — P0.3: package layout, CLI, settings and legacy cleanup
+
+### What happened
+- Created the `student_path` package and removed `src/__init__.py`. Removed the `sys.path` hacks and argparse blocks from the v1 parser and normalizer; their parsing logic is unchanged.
+- **Isolated everything from the v1 approach so nobody builds on it by mistake:** v1 parser, v1 normalizer and the old regex parser (`test.py`) now live in `src/student_path/legacy/` (git history kept), reachable only via `sp legacy parse|normalize`. Their outputs (`modules.json`, the OCR Docling JSON and Markdown) moved to `data/legacy/` (gitignored, nothing deleted). `data/modules.json` is **not** a usable dataset (about 47% of fields, merged/duplicate records); it is only the E1 baseline. `student_path.ingestion` is reserved for the v2 pipeline (P1).
+- Rewrote `ROADMAP.md` (v2 phases with checkboxes) and `ARCHITECTURE.md` (v2 diagram, ADR-005 to ADR-014; ADR-002/003/004 marked superseded), so `context/` describes one approach only.
+- Moved the PDF to `data/source/Modulkatalog-Master-Informatik.pdf`.
+- New `src/student_path/settings.py`: pydantic-settings reading `.env`. Relative paths resolve against the project root; the API key is a `SecretStr`. `.env.example` now matches (Gemini model ids, `QDRANT_PATH` / `QDRANT_URL`, Langfuse placeholders).
+- New `sp` CLI (Typer): `sp --version`, `sp config` (never prints secrets), `sp legacy parse|normalize`. Docling is imported lazily, so `--help` stays fast.
+- Fixed finding F6(f): `--pages` is now passed to Docling (1-based, inclusive). Verified with pages 49–51, about 32 s.
+- Regression check only (not an endorsement of the output): after the move, `sp legacy normalize` reproduces the previous `modules.json` byte for byte, so the E1 baseline is stable.
+- `tests/test_cli.py`: 11 tests (version, secret masking, path resolution, page-range parsing), all passing. Ruff line length set to 110.
+
+### Key decisions
+- Settings live in the package (`src/student_path/settings.py`), not in `config/`, because code must be importable. `config/` will hold data files (degree rules, prompts).
+- No empty stub modules for future phases; each subpackage is added when its phase starts.
+- Legacy code stays out of `student_path.ingestion` and is excluded from linting/type checks; it is deleted once P1 has replaced it and E1 is recorded.
+
+### Next steps
+- P0.5: pre-commit (ruff), pyright. P0.6: docker-compose for Qdrant. P0.7: CLAUDE.md.
 
 ---
 

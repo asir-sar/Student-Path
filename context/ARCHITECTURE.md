@@ -1,129 +1,77 @@
 # Architecture & Technical Decisions
 
-## Adapted Architecture
+Current architecture: **v2, structured-first agentic hybrid RAG** (accepted 2026-11-25). Evidence, alternatives and code skeletons are in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) §2–§6; progress is tracked in [ROADMAP.md](ROADMAP.md).
+
+## Architecture
 
 ```mermaid
-flowchart TD
-    PDF["Modulkatalog PDF<br/>~600 pages, bilingual"]
-    
-    PARSE["Docling<br/>PDF → structured Markdown<br/>tables + text"]
-    NORM["Module Normalizer<br/>Markdown → structured JSON<br/>per-module records"]
-    EMBED["BGE-M3 Embeddings<br/>Dense + sparse vectors"]
-    
-    QDRANT["Qdrant<br/>Hybrid search<br/>metadata filtering"]
-    
-    AGENT["LangGraph Agent<br/>Intent classification<br/>query routing"]
-    LLM["LLM<br/>Cloud API (OpenAI/Gemini)"]
-    
-    UI["Web UI<br/>Streamlit or React"]
-    
-    PDF --> PARSE --> NORM --> EMBED --> QDRANT
-    UI --> AGENT
-    AGENT --> QDRANT
-    AGENT --> LLM
-    LLM --> UI
+flowchart LR
+  subgraph BUILD["Build time · once per catalogue version"]
+    PDF["Catalogue PDF<br/>603 pages, digital"] --> SEG["Segment by bookmarks<br/>201 page ranges"]
+    SEG --> DOC["Docling, OCR off<br/>tables + page provenance"]
+    DOC --> FLD["Field assembly + clean<br/>17 label anchors"]
+    FLD --> LLM["Gemini normalize<br/>schema + grounding check"]
+    LLM --> VAL["Validate + reconcile<br/>data contract · QA report"]
+  end
+  subgraph KNOW["Knowledge layer"]
+    DB[("DuckDB<br/>module records")]
+    VEC[("Qdrant<br/>dense+sparse views<br/>regulations")]
+    G[("Prerequisite graph")]
+    RULES[["degree_rules.yaml"]]
+  end
+  VAL --> DB & VEC & G
+  subgraph ASK["Ask time · every question"]
+    UI["Chat + planner UI"] --> API["FastAPI · SSE"] --> RT{"LangGraph router<br/>8 intents"}
+    RT --> TOOLS["Typed read-only tools<br/>resolve · filter · search ·<br/>regulations · audit · plan (CP-SAT)"]
+    TOOLS --> GEN["Gemini answer, cited"] --> VER["Verify numbers"] --> UI
+  end
+  TOOLS -.->|reads| DB & VEC & G & RULES
 ```
 
-## Technology Stack
+## Technology stack
 
 | Component | Choice | Rationale |
 |---|---|---|
-| **PDF Parsing** | Docling | Handles complex table layouts, OCR, retains structure. Enterprise guide uses same tool |
-| **Module Normalization** | Custom Python script | Post-processes Docling output into clean per-module JSON records |
-| **Embeddings** | BGE-M3 (via sentence-transformers or FlagEmbedding) | Multilingual (DE/EN), produces both dense and sparse vectors in one pass |
-| **Vector DB** | Qdrant | Hybrid search support, metadata filtering, same as enterprise guide |
-| **Reranker** | bge-reranker-v2-m3 | Same as enterprise guide, proven for multilingual content |
-| **Agent** | LangGraph (via langgraph) | Same framework as enterprise guide, tool-calling agent pattern |
-| **Backend** | FastAPI | Same as enterprise guide, clean API layer |
-| **LLM** | OpenAI API or Google Gemini | Cloud API for simplicity. OpenAI-compatible interface allows swapping later |
-| **Frontend** | Streamlit (MVP) → React (optional) | Streamlit for rapid iteration, upgrade later if desired |
-| **Evaluation** | Ragas | Measurable retrieval and answer quality |
+| Segmentation | pypdfium2 bookmarks | Deterministic: all 188 numbered modules start on their bookmarked page |
+| PDF parsing | Docling, OCR off, TableFormer `ACCURATE` | Digital PDF; page provenance for citations; same tool as the enterprise project |
+| Normalization | Rules first, Gemini structured output second, validation always | Exact where possible, schema-checked and grounded where not |
+| System of record | DuckDB over `modules.jsonl` | Complete lists and exact aggregates |
+| Semantic index | Qdrant (named dense + sparse vectors, payload indexes) | Hybrid search + filters + group-by-PN in one query |
+| Embeddings / reranker | BGE-M3 / bge-reranker-v2-m3 (CPU) | Cross-lingual DE/EN; dense and sparse in one pass |
+| Orchestration | LangGraph router + typed tools | Explicit, testable control flow |
+| LLM | Google Gemini (Flash tier for routing/extraction, Pro tier for explanations) | Project decision; long context also powers baseline B1 |
+| Planner | OR-Tools CP-SAT | Exact constraints and optimization |
+| API / UI | FastAPI (SSE) + Chainlit or Streamlit (decided in P6) | Streaming chat, tool steps, feedback |
+| Evaluation / tracing | Own metrics + selected Ragas metrics, Langfuse | Per-layer gates, traces, feedback |
+| Tooling | uv, ruff, pyright, pytest + Hypothesis, Typer CLI (`sp`) | Reproducible, fast feedback |
 
-## Key Design Decisions
+## Key design decisions
 
-### ADR-001: Docling over custom regex parser (test.py)
+| ADR | Decision | Status |
+|---|---|---|
+| ADR-001 | Docling over a custom regex parser | Decided (2026-10-10), still valid. The regex parser (former `test.py`) lives in `src/student_path/legacy/regex_parser.py` |
+| ADR-002 | One module = one chunk | **Superseded** by ADR-010 |
+| ADR-003 | Metadata schema keyed by `module_id` | **Superseded** by ADR-006 and the data model in IMPLEMENTATION_PLAN §6 |
+| ADR-004 | Four agent intents | **Superseded** by ADR-011 (eight intents) |
+| ADR-005 | Segment modules by PDF bookmark page ranges | Accepted 2026-11-25 |
+| ADR-006 | PN (exam number) is the primary key; `module_id` is a non-unique attribute | Accepted 2026-11-25 |
+| ADR-007 | OCR off; consume the DoclingDocument JSON, never the Markdown | Accepted 2026-11-25 |
+| ADR-008 | Extraction: deterministic first, LLM second, validate always | Accepted 2026-11-25 |
+| ADR-009 | DuckDB is the system of record; Qdrant is a derived, rebuildable index | Accepted 2026-11-25 |
+| ADR-010 | Multi-view indexing per module, grouped by PN at query time | Accepted 2026-11-25 |
+| ADR-011 | Router + typed read-only tools; no free-form text-to-SQL in the main path | Accepted 2026-11-25 |
+| ADR-012 | Planning and adjustment by CP-SAT over hand-encoded, cited degree rules | Accepted 2026-11-25 |
+| ADR-013 | Evaluation-driven development: golden sets, baselines B0/B1, phase gates | Accepted 2026-11-25 |
+| ADR-014 | Legacy v1 code is isolated in `student_path/legacy/` and `data/legacy/`, used only as the E1 baseline, deleted after P1 | Accepted 2026-11-25 |
 
-**Status:** Decided  
-**Date:** 2026-10-10
+### ADR-002 to ADR-004: why they were superseded
 
-**Context:** An existing [test.py](../test.py) implements a custom regex-based parser that reads pipe-delimited markdown tables and normalizes them into JSON. It handles edge cases like hyphenated words split across lines and multi-line values.
+- **ADR-002 (one chunk per module):** a module spans 2–6 pages of interleaved German and English text. One 1024-d vector for all of it dilutes meaning. Multi-view points grouped by PN keep precision while the LLM still sees the full record.
+- **ADR-003 (`module_id` as key):** `5851` and `5853` each name two different modules, and 13 modules have no 4-digit ID. As Qdrant point IDs, one module would silently overwrite another. The exam number (PN) is unique for all 201 modules.
+- **ADR-004 (four intents):** lists, regulations, degree audit and out-of-scope questions need their own machinery (SQL filters, passage search, the solver, abstention), so the router distinguishes eight intents.
 
-**Evaluation of test.py:**
-- ✅ Already works for the sample data (1 module parsed correctly)
-- ✅ Handles continuation lines and hyphenation  
-- ❌ **Fragile:** Relies on regex patterns that break with formatting variations
-- ❌ **Assumes pre-extracted markdown:** Needs the PDF already converted to pipe-delimited text — doesn't solve the harder PDF parsing problem
-- ❌ **Doesn't scale:** 600 pages of varied table formatting will produce many edge cases
-- ❌ **Key detection is heuristic:** `is_new_key` logic using lowercase detection will misclassify German nouns (which are always capitalized)
-
-**Decision:** Use **Docling** as the primary PDF parser (it's the same tool chosen in the enterprise guide). Docling handles:
-- PDF → structured Markdown natively
-- Table detection and extraction
-- OCR for scanned content
-- Heading structure preservation
-
-After Docling extracts the raw structured content, a **lightweight normalizer** (simpler than test.py) cleans and structures the output into per-module JSON. The normalizer can borrow useful logic from test.py (like the `append_text` hyphenation handling) but won't need the fragile regex table parsing.
-
-**Consequence:** test.py is kept as reference but not used in the pipeline. Its sample data is useful for testing the normalizer.
-
----
-
-### ADR-002: One module = one chunk
-
-**Status:** Decided  
-**Date:** 2026-10-10
-
-**Context:** The enterprise guide recommends structure-based chunking by headings (300-800 tokens). Course catalogue modules are self-contained records.
-
-**Decision:** Each module becomes exactly one chunk. A typical module description fits within 400-700 tokens, which is within the recommended range. Benefits:
-- No information loss across chunk boundaries
-- Clean metadata attachment
-- Simple retrieval: one result = one complete course
-
-**Exception:** If any module exceeds ~1000 tokens (unlikely), split into "overview" and "details" sub-chunks with shared metadata.
+The reasoning and evidence for ADR-005 to ADR-013 are in IMPLEMENTATION_PLAN §2 (findings F1–F12) and §5.2.
 
 ---
 
-### ADR-003: Metadata schema
-
-**Status:** Decided  
-**Date:** 2026-10-10
-
-**Payload metadata per chunk (stored in Qdrant):**
-
-```json
-{
-  "module_id": "5622",
-  "module_name_de": "Software-Sicherheit",
-  "module_name_en": "System Security",
-  "ects": 5,
-  "semester_offered": "summer",
-  "language": ["de", "en"],
-  "lecturer": "Posegga",
-  "focus_area": "IT-SecRel",
-  "prerequisites": ["Advanced IT Security"],
-  "contact_hours_sws": 3,
-  "assessment_types": ["exam", "presentation"],
-  "workload_total_hours": 150
-}
-```
-
-These enable filtered queries (e.g., "summer courses with 5+ ECTS in English").
-
----
-
-### ADR-004: Agent intent types
-
-**Status:** Decided  
-**Date:** 2026-10-10
-
-The LangGraph agent classifies student queries into four intents:
-
-1. **Course lookup** — "Tell me about Software-Sicherheit" → direct Qdrant retrieval by module name/ID
-2. **Recommendation** — "What security courses are offered in summer?" → semantic search + metadata filters
-3. **Semester planning** — "Plan my 3rd semester with ~30 ECTS" → multi-retrieval with ECTS constraint satisfaction
-4. **Comparison** — "Compare X vs Y" → retrieve both modules, structured side-by-side
-
----
-
-*Last updated: 2026-10-10*
+*Last updated: 2026-11-25*

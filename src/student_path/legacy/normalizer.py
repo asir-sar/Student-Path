@@ -1,27 +1,23 @@
 """
-Phase 1, Task 1.3-1.5: Normalize Docling output into structured module JSON.
+LEGACY v1 normalizer (superseded, see student_path/legacy/__init__.py).
+
+Normalize Docling output into structured module JSON.
 
 Reads the raw Markdown output from Docling (or the structured JSON) and extracts
-individual modules with their structured fields.
+individual modules with their structured fields. Known limitations are listed in
+context/IMPLEMENTATION_PLAN.md (findings F5/F6); phase P1 replaces this module.
 
-Usage:
-    python src/ingestion/normalizer.py
-    python src/ingestion/normalizer.py --input data/raw/modulkatalog_raw.md
-    python src/ingestion/normalizer.py --input data/raw/modulkatalog_docling.json --format json
-    python src/ingestion/normalizer.py --inspect   # Print 5 random modules for quality check
+Usage (see `uv run sp legacy normalize --help`):
+    uv run sp legacy normalize
+    uv run sp legacy normalize --input data/legacy/modulkatalog_docling.json --format json
+    uv run sp legacy normalize --inspect   # print 5 random modules for a quality check
 """
 
-import argparse
 import json
 import os
 import re
 import random
-import sys
-from pathlib import Path
 from typing import Any
-
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
 
 
 # ─── Field Mapping ────────────────────────────────────────────────────────────
@@ -453,49 +449,9 @@ def inspect_modules(modules: list[dict], count: int = 5):
         print()
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Normalize Docling output into structured module JSON"
-    )
-    parser.add_argument(
-        "--input",
-        default=str(PROJECT_ROOT / "data" / "raw" / "modulkatalog_raw.md"),
-        help="Path to Docling output (Markdown or JSON)",
-    )
-    parser.add_argument(
-        "--format",
-        choices=["auto", "markdown", "json"],
-        default="auto",
-        help="Input format (default: auto-detect from extension)",
-    )
-    parser.add_argument(
-        "--output",
-        default=str(PROJECT_ROOT / "data" / "modules.json"),
-        help="Path for the output JSON file",
-    )
-    parser.add_argument(
-        "--inspect",
-        action="store_true",
-        help="Print random sample modules for quality inspection",
-    )
-    parser.add_argument(
-        "--inspect-count",
-        type=int,
-        default=5,
-        help="Number of random modules to inspect (default: 5)",
-    )
-
-    args = parser.parse_args()
-
-    # Run normalization
-    modules = normalize_modules(args.input, args.format)
-
-    # Save output
-    os.makedirs(os.path.dirname(args.output), exist_ok=True)
-    with open(args.output, "w", encoding="utf-8") as f:
+def save_modules(modules: list[dict], output_path: str) -> None:
+    """Write the module records as pretty-printed UTF-8 JSON."""
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
         json.dump(modules, f, indent=2, ensure_ascii=False)
-    print(f"\nSaved {len(modules)} modules to {args.output}")
-
-    # Optional inspection
-    if args.inspect:
-        inspect_modules(modules, args.inspect_count)
+    print(f"\nSaved {len(modules)} modules to {output_path}")

@@ -24,10 +24,11 @@ The full plan is in [context/IMPLEMENTATION_PLAN.md](context/IMPLEMENTATION_PLAN
 | Path | Contents |
 |---|---|
 | `context/` | Project brief, architecture decisions, roadmap, development log, implementation plan |
-| `src/ingestion/` | PDF parsing (Docling) and normalization into module records |
+| `src/student_path/` | The Python package: `cli.py` (the `sp` command), `settings.py` (typed settings from `.env`). The v2 ingestion pipeline is built here in phase P1 |
+| `src/student_path/legacy/` | Superseded v1 parser/normalizer, kept only as a comparison baseline |
+| `tests/` | pytest suite |
+| `data/source/` | Source catalogue PDF (Stand 13.10.2025) |
 | `data/test_questions.json` | First evaluation questions |
-| `Modulkatalog-Master-Informatik.pdf` | Source catalogue (Stand 13.10.2025) |
-| `test.py` | Earlier regex-based table parser, kept for reference |
 
 ## Getting started (current state)
 
@@ -35,17 +36,18 @@ Requires [uv](https://docs.astral.sh/uv/). Dependencies are declared in `pyproje
 
 ```bash
 uv sync                                       # creates .venv (Python 3.11) with all dependency groups
-uv run python src/ingestion/parser.py         # PDF -> data/raw/ (Docling)
-uv run python src/ingestion/normalizer.py     # data/raw/ -> data/modules.json
+uv run sp config                              # show the effective settings
 uv run pytest                                 # tests
 ```
 
+Every command has `--help`.
+
 For a lighter environment, leave out groups, e.g. `uv sync --no-group ml`. The groups are `ingest`, `ml`, `serve`, `eval` and `dev`.
 
-Copy `.env.example` to `.env` and add your Gemini API key before using the LLM steps.
+Copy `.env.example` to `.env` and add your Gemini API key and model ids before using the LLM steps.
 
-Generated files in `data/raw/` and `data/modules.json` are not committed, because the pipeline rebuilds them.
+The v2 ingestion pipeline (`sp ingest`) arrives in phase P1. The superseded v1 pipeline is still runnable as `sp legacy parse` / `sp legacy normalize` for comparison only; its output is incomplete. Generated data is not committed, because the pipeline rebuilds it.
 
 ## Data source
 
-`Modulkatalog-Master-Informatik.pdf` is the official module catalogue of the M.Sc. Informatik programme at the University of Passau (Stand 13.10.2025, SHA-256 `1ddab2760962bfece10400035f8da10c426d65e12d02ebf830e4f4b965c291fc`). All rights to the catalogue remain with the university. It is included so the pipeline can be reproduced.
+`data/source/Modulkatalog-Master-Informatik.pdf` is the official module catalogue of the M.Sc. Informatik programme at the University of Passau (Stand 13.10.2025, SHA-256 `1ddab2760962bfece10400035f8da10c426d65e12d02ebf830e4f4b965c291fc`). All rights to the catalogue remain with the university. It is included so the pipeline can be reproduced.
