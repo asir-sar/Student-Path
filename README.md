@@ -31,17 +31,20 @@ The full plan is in [context/IMPLEMENTATION_PLAN.md](context/IMPLEMENTATION_PLAN
 
 ## Getting started (current state)
 
+Requires [uv](https://docs.astral.sh/uv/). Dependencies are declared in `pyproject.toml` and pinned in `uv.lock`; PyTorch comes from the CPU-only index.
+
 ```bash
-python -m venv .venv
-# Windows: .venv\Scripts\activate    macOS/Linux: source .venv/bin/activate
-pip install -r requirements.txt
-python src/ingestion/parser.py        # PDF -> data/raw/ (Docling)
-python src/ingestion/normalizer.py    # data/raw/ -> data/modules.json
+uv sync                                       # creates .venv (Python 3.11) with all dependency groups
+uv run python src/ingestion/parser.py         # PDF -> data/raw/ (Docling)
+uv run python src/ingestion/normalizer.py     # data/raw/ -> data/modules.json
+uv run pytest                                 # tests
 ```
+
+For a lighter environment, leave out groups, e.g. `uv sync --no-group ml`. The groups are `ingest`, `ml`, `serve`, `eval` and `dev`.
 
 Copy `.env.example` to `.env` and add your Gemini API key before using the LLM steps.
 
-Generated files in `data/raw/` and `data/modules.json` are not committed, because the pipeline rebuilds them. Phase 0 of the plan moves tooling to uv and a package layout.
+Generated files in `data/raw/` and `data/modules.json` are not committed, because the pipeline rebuilds them.
 
 ## Data source
 

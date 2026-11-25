@@ -97,6 +97,24 @@ Chronological record of all development activity, decisions, and findings.
 
 ---
 
+## 2026-11-25 — P0.2: uv environment
+
+### What happened
+- Replaced `requirements.txt` with `pyproject.toml` + `uv.lock` (uv 0.11.21, Python 3.11).
+- Dependency groups as in the plan: `ingest`, `ml`, `serve`, `eval`, `dev`. All five are default groups, so plain `uv sync` installs everything. The UI group is added in P6, once Chainlit vs. Streamlit is decided.
+- Torch comes from the PyTorch CPU index (2.15.0+cpu).
+- Added a `src/student_path/` package stub (uv_build backend). The existing `src/ingestion/` moves into it in P0.3.
+- Synced the existing `.venv`. Mostly minor upgrades (e.g. docling 2.137 → 2.153, transformers 5.19 → 5.24). New: duckdb, rapidfuzz, ortools, langfuse, langgraph-checkpoint-sqlite, ruff, pyright, pytest, hypothesis, pre-commit.
+- Smoke test passed: all key imports work, PDF bookmarks read (204), Qdrant hybrid collection created, Gemini structured-output API present, CP-SAT solves.
+
+### Key decisions
+- `google-genai` capped `<3`: the lock would have jumped 2.29 → 3.6 (a major version). Upgrade deliberately and re-check the P1.8 normalization code.
+
+### Next steps
+- P0.3: move `src/ingestion/` into `src/student_path/`, add the Typer CLI (`sp`) and config/settings.
+
+---
+
 <!-- 
 Template for new entries:
 

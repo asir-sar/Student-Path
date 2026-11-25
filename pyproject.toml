@@ -1,0 +1,70 @@
+[project]
+name = "student-path"
+version = "0.1.0"
+description = "RAG chatbot and semester planner for the M.Sc. Informatik module catalogue"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "pydantic>=2.14",
+    "pydantic-settings>=2.6",
+    "python-dotenv>=1.2",
+    "pyyaml>=6.0",
+    "typer>=0.15",
+    "duckdb>=1.2",
+    "rapidfuzz>=3.12",
+]
+
+[dependency-groups]
+# PDF parsing and segmentation
+ingest = [
+    "docling>=2.137",
+    "pypdfium2>=5.14",
+]
+# Embeddings and reranking (CPU torch, see [tool.uv.sources])
+ml = [
+    "torch>=2.14",
+    "FlagEmbedding>=1.4.2",
+    "sentence-transformers>=6.1",
+    "transformers>=5.19",
+]
+# Retrieval, agent, LLM and API
+serve = [
+    "fastapi>=0.143",
+    "uvicorn>=0.54",
+    "langchain>=1.4.4",
+    "langgraph>=1.2.14",
+    "langgraph-checkpoint-sqlite>=2.0",
+    "langchain-google-genai>=4.4.1",
+    "google-genai>=2.29,<3",   # 3.x is a major upgrade: move deliberately, re-check P1.8 code
+    "qdrant-client>=1.19.1",
+    "ortools>=9.12",
+    "langfuse>=3.0",
+]
+eval = [
+    "ragas>=0.4.3",
+]
+dev = [
+    "ruff>=0.9",
+    "pyright>=1.1.390",
+    "pytest>=8.3",
+    "hypothesis>=6.120",
+    "pre-commit>=4.0",
+]
+# The UI group (chainlit or streamlit) is added in phase P6, once that choice is made.
+
+[tool.uv]
+# A plain `uv sync` installs everything the project currently uses.
+# Use `uv sync --no-group ml` etc. for a lighter environment.
+default-groups = ["ingest", "ml", "serve", "eval", "dev"]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[build-system]
+requires = ["uv_build>=0.11.21,<0.12"]
+build-backend = "uv_build"
