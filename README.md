@@ -24,7 +24,8 @@ The full plan is in [context/IMPLEMENTATION_PLAN.md](context/IMPLEMENTATION_PLAN
 | Path | Contents |
 |---|---|
 | `context/` | Project brief, architecture decisions, roadmap, development log, implementation plan |
-| `src/student_path/` | The Python package: `cli.py` (the `sp` command), `settings.py` (typed settings from `.env`). The v2 ingestion pipeline is built here in phase P1 |
+| `CLAUDE.md` | Working guide for AI coding assistants: commands, conventions, what never to do |
+| `src/student_path/` | The Python package: `cli.py` (the `sp` command), `settings.py` (typed settings from `.env`), `store/` (Qdrant client). The v2 ingestion pipeline is built here in phase P1 |
 | `src/student_path/legacy/` | Superseded v1 parser/normalizer, kept only as a comparison baseline |
 | `tests/` | pytest suite |
 | `data/source/` | Source catalogue PDF (Stand 13.10.2025) |
@@ -37,12 +38,15 @@ Requires [uv](https://docs.astral.sh/uv/). Dependencies are declared in `pyproje
 ```bash
 uv sync                                       # creates .venv (Python 3.11) with all dependency groups
 uv run sp config                              # show the effective settings
+uv run sp check                               # is everything ready? (PDF, Gemini settings, Qdrant)
 uv run pytest                                 # tests
 uv run pre-commit install                     # once: ruff, pyright and file checks on every commit
 uv run pre-commit run --all-files             # run all checks manually
 ```
 
 Every `sp` command has `--help`.
+
+Qdrant runs embedded by default (files under `data/qdrant/`, no Docker needed). For the server, run `docker compose up -d` and set `QDRANT_URL=http://localhost:6333` in `.env`.
 
 For a lighter environment, leave out groups, e.g. `uv sync --no-group ml`. The groups are `ingest`, `ml`, `serve`, `eval` and `dev`.
 

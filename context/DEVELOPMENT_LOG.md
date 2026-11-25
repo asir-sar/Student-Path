@@ -153,6 +153,28 @@ Chronological record of all development activity, decisions, and findings.
 
 ---
 
+## 2026-11-25 — P0.6 and P0.7: Qdrant server option, CLAUDE.md (Phase 0 done)
+
+### What happened
+- `docker-compose.yml`: Qdrant `v1.20.2` (pinned; matches qdrant-client 1.20), ports 6333/6334, named volume `qdrant_storage`, healthcheck, telemetry off. Verified: container healthy, server reports 1.20.2, `sp check` passes against it. Container stopped again afterwards (volume kept); embedded mode stays the default.
+- `student_path/store/qdrant.py`: `get_qdrant_client()` is the single place that picks server mode (`QDRANT_URL` set) or embedded mode (`QDRANT_PATH`).
+- `sp check`: environment readiness report. Source PDF and Qdrant are required (exit code 1 on failure); the Gemini key and model ids are warnings until P1.8.
+- `CLAUDE.md`: what to read first, commands, layout, conventions (PN as key, structured LLM output, prompts as files), a "never" list (legacy code, `modules.json` as ground truth, private material, golden test split), and the per-step workflow.
+- Tests: 14 passing (3 new for the Qdrant factory and `sp check`); ruff and pyright clean.
+- A real API key was briefly typed into `.env.example` (tracked, public repo). It was never staged or committed: it was moved to `.env` (gitignored), and a `no-secrets-in-env-example` pre-commit hook now blocks values for `*KEY`, `*SECRET`, `*TOKEN` and `*PASSWORD` variables in `.env.example`.
+- qdrant-client's "Failed to obtain server version" warning (from the deliberate unreachable-server test) leaked outside the test in full-suite runs, so it is filtered in the pytest config for that exact message only.
+
+### Key decisions
+- Server data lives in a Docker volume, separate from `data/qdrant/` (embedded files use a different on-disk format).
+
+### Open questions
+- Gemini model ids to pin in `.env` before P1.8 (check the current model list).
+
+### Next steps
+- Phase 1: P1.1 probe/manifest, P1.2 Docling re-run with OCR off, P1.3 bookmark segmentation with tests.
+
+---
+
 <!--
 Template for new entries:
 

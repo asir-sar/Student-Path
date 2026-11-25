@@ -6,7 +6,7 @@ Progress tracker for the v2 plan. Details, code skeletons and the reasoning behi
 
 ---
 
-## Phase 0: Foundations 🟡 IN PROGRESS
+## Phase 0: Foundations ✅ DONE (2026-11-25)
 
 > **Goal:** a professional skeleton, so every later step is fast to run, test and undo.
 
@@ -15,14 +15,14 @@ Progress tracker for the v2 plan. Details, code skeletons and the reasoning behi
 - [x] **P0.3** package layout `src/student_path/`, `sp` CLI, v1 code isolated in `legacy/`, PDF in `data/source/`
 - [x] **P0.4** typed settings (`student_path/settings.py`) and matching `.env.example`
 - [x] **P0.5** pre-commit (ruff lint + format), pyright, pytest wired in
-- [ ] **P0.6** `docker-compose.yml` with Qdrant (pinned tag); embedded mode stays the default for development
-- [ ] **P0.7** `CLAUDE.md` / `AGENTS.md`: commands, layout, conventions, "never" list
+- [x] **P0.6** `docker-compose.yml` with Qdrant (pinned tag); embedded mode stays the default for development
+- [x] **P0.7** `CLAUDE.md`: commands, layout, conventions, "never" list
 
 **Gate:** `uv run pytest` passes · `uv run sp --help` works · CI-ready checks run locally
 
 ---
 
-## Phase 1: Data foundation v2 ⬜
+## Phase 1: Data foundation v2 🟡 NEXT
 
 > **Goal:** 201 validated, typed module records and a QA report you trust.
 
@@ -128,4 +128,4 @@ ColBERT late interaction · fine-tuned reranker or embeddings · guarded text-to
 
 ---
 
-*Last updated: 2026-11-25 · Current phase: 0 — Foundations*
+*Last updated: 2026-11-25 · Current phase: 1 — Data foundation v2*

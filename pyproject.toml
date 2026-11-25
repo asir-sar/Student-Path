@@ -74,6 +74,10 @@ build-backend = "uv_build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+filterwarnings = [
+    # qdrant-client warns when no server answers its version probe; tests do that on purpose
+    "ignore:Failed to obtain server version:UserWarning",
+]
 
 [tool.ruff]
 line-length = 110

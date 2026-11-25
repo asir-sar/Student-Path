@@ -35,4 +35,4 @@ This project is a **stepping stone** for an enterprise RAG project (its technica
 ---
 
 *Created: 2026-10-10*
-*Status: Phase 0 — Foundations (v2 plan, see [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) and [ROADMAP.md](ROADMAP.md))*
+*Status: Phase 1 — Data foundation v2 (v2 plan, see [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) and [ROADMAP.md](ROADMAP.md))*

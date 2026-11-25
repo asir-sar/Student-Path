@@ -19,6 +19,12 @@ repos:
 
   - repo: local
     hooks:
+      # .env.example is public: keys, secrets, tokens and passwords must stay empty there (real values go in .env)
+      - id: no-secrets-in-env-example
+        name: no secret values in .env.example
+        language: pygrep
+        entry: '^[A-Z0-9_]*(KEY|SECRET|TOKEN|PASSWORD)[A-Z0-9_]*=\S'
+        files: ^\.env\.example$
       - id: ruff-check
         name: ruff check
         entry: uv run ruff check --fix

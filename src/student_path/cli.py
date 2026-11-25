@@ -51,6 +51,53 @@ def config() -> None:
         typer.echo(f"{name:20s} {shown}")
 
 
+@app.command()
+def check() -> None:
+    """Check that the environment is ready: source PDF, Gemini settings, Qdrant.
+
+    Exits with code 1 if a required check fails. Gemini settings are only warnings
+    until the LLM steps start (phase P1.8).
+    """
+    settings = get_settings()
+    failed = False
+
+    def report(ok: bool | None, label: str, detail: str) -> None:
+        mark = {True: "ok  ", False: "FAIL", None: "warn"}[ok]
+        typer.echo(f"[{mark}] {label:18s} {detail}")
+
+    if settings.pdf_path.exists():
+        size_mb = settings.pdf_path.stat().st_size / 1_048_576
+        report(True, "source PDF", f"{settings.pdf_path.name} ({size_mb:.1f} MB)")
+    else:
+        failed = True
+        report(False, "source PDF", f"missing: {settings.pdf_path}")
+
+    report(
+        True if settings.google_api_key else None,
+        "GOOGLE_API_KEY",
+        "set" if settings.google_api_key else "not set (needed from P1.8)",
+    )
+    for name in ("gemini_fast_model", "gemini_smart_model"):
+        value = getattr(settings, name)
+        report(True if value else None, name.upper(), value or "not set (pin an exact model id)")
+
+    from student_path.store.qdrant import get_qdrant_client
+
+    mode = f"server {settings.qdrant_url}" if settings.qdrant_url else f"embedded {settings.qdrant_path}"
+    try:
+        client = get_qdrant_client(settings)
+        names = [c.name for c in client.get_collections().collections]
+        client.close()
+        report(True, "Qdrant", f"{mode}, {len(names)} collection(s)")
+    except Exception as exc:  # report every connection problem the same way
+        failed = True
+        hint = " (is `docker compose up -d` running?)" if settings.qdrant_url else ""
+        report(False, "Qdrant", f"{mode}: {type(exc).__name__}{hint}")
+
+    if failed:
+        raise typer.Exit(code=1)
+
+
 def _parse_pages(pages: str | None) -> tuple[int, int] | None:
     if pages is None:
         return None
