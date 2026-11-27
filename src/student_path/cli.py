@@ -213,6 +213,21 @@ def ingest_extract(
     typer.echo(f"Saved {out}")
 
 
+@ingest_app.command("segment")
+def ingest_segment() -> None:
+    """P1.3: split the catalogue into 201 module page ranges using the PDF bookmarks."""
+    from student_path.ingestion.segment import segment_modules, write_segments
+
+    settings = get_settings()
+    segments = segment_modules(settings.pdf_path)
+    out = settings.interim_dir / "segments.jsonl"
+    write_segments(segments, out)
+    no_id = sum(1 for s in segments if s.module_id is None)
+    first, last = segments[0].page_start, segments[-1].page_end
+    typer.echo(f"{len(segments)} modules, pages {first}-{last}, {no_id} without a module ID")
+    typer.echo(f"Saved {out}")
+
+
 @ingest_app.command("coverage")
 def ingest_coverage(
     doc: Annotated[
