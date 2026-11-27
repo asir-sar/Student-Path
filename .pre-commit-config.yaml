@@ -25,6 +25,12 @@ repos:
         language: pygrep
         entry: '^[A-Z0-9_]*(KEY|SECRET|TOKEN|PASSWORD)[A-Z0-9_]*=\S'
         files: ^\.env\.example$
+      # invisible characters in source hide bugs; write them as escapes (e.g. "\u00ad")
+      - id: no-invisible-characters
+        name: no invisible characters in Python source
+        language: pygrep
+        entry: '[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]|\xc2\xad|\xe2\x80[\x8b-\x8f]|\xe2\x81\xa0|\xef\xbb\xbf|\xef\xbf\xbe'  # UTF-8 bytes: pygrep matches bytes
+        types: [python]
       - id: ruff-check
         name: ruff check
         entry: uv run ruff check --fix

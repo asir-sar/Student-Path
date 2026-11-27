@@ -27,7 +27,7 @@ from pathlib import Path
 import pypdfium2 as pdfium
 from pydantic import BaseModel
 
-SOFT_BREAK = "￾"  # pdfium's marker for a line-break hyphen
+SOFT_BREAK = "\ufffe"  # pdfium's marker for a line-break hyphen
 WORD_RE = re.compile(r"\w{2,}")
 JOIN_HYPHEN_RE = re.compile(r"(?<=\w)-\s*(?=\w)")
 

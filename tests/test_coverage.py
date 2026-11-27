@@ -5,7 +5,7 @@ import pytest
 from student_path.ingestion.coverage import coverage, text_coverage
 from student_path.settings import get_settings
 
-SOFT_BREAK = "￾"  # how pdfium marks a line-break hyphen in the text layer
+SOFT_BREAK = "\ufffe"  # how pdfium marks a line-break hyphen in the text layer
 NL = "\r\n"
 
 
