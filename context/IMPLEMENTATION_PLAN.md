@@ -55,7 +55,7 @@
 | F5 | The current `modules.json` is about half empty, and some records are merged | 271 records for 201 modules: table-of-contents rows became empty "ghost" records, and 85 IDs appear twice. A real module has a given field filled only about 48% of the time. ECTS is present and correct for 32.8%. Record "5670" contains text from 5710 and later modules. Values contain `-----` separator runs | Rebuild the normalizer (Phase 1) |
 | F6 | Root causes of F5 | (a) TOC rows such as `\| 5487 \| AI-Driven … \|` match the new-module test `^\d{3,}$` ([legacy/normalizer.py:215](../src/student_path/legacy/normalizer.py#L215)). (b) Some header rows merge ID and title (`5710 Algorithmische … PN 455414`), so the test misses them and modules glue together. (c) Tables split at page breaks, and continuation rows have an empty label cell. (d) Docling repeats spanned cells, giving 4 columns instead of 2. (e) `language` defaults to `["de"]` when it is missing ([legacy/normalizer.py:134](../src/student_path/legacy/normalizer.py#L134)), which hides gaps. (f) `--pages` is parsed but never passed to `convert()` (fixed in P0.3) | Fix the segmentation, not the parser |
 | F7 | Spike: same Docling JSON, new segmentation | Bookmark page ranges plus label anchors: 16 comparable fields are 98–100% filled; ECTS is a clean integer for 97.5% | The approach was validated before committing to it |
-| F8 | What is still dirty | 50 `content` values start with a page-break fragment ("mic principles to practical requirements." is the tail of the learning outcomes). Also 11 `assessment` and 3 `literature` values. 2,124 hyphenation artifacts ("Nach- bearbeitung", "analy- sis"). German and English are interleaved in one value ("Keine None", "Jedes Sommersemester Every summer semester") | Add clean and normalize stages with grounding checks |
+| F8 | What is still dirty | 50 `content` values start with a page-break fragment ("mic principles to practical requirements." is the tail of the learning outcomes). Also 11 `assessment` and 3 `literature` values. 2,124 hyphenation artifacts ("Nach- bearbeitung", "analy- sis"). German and English are interleaved in one value ("Keine None", "Jedes Sommersemester Every summer semester") | Add clean and normalize stages with grounding checks *Resolved 2026-11-28 by ADR-015: assembled from the text layer by geometry, no bleed remains; line-break hyphens are known exactly (soft hyphens)* |
 | F9 | The catalogue states its own rules | p. 17: ≥120 ECTS in total; ≥40 ECTS in one focus group (AlgMath, ProgSoft, InfKomm, ITS, IT-SecRel); ≥30 ECTS from the other focus groups plus General Area; compulsory Seminar 5 + Master's Thesis 27 + Presentation 3. p. 18: ≥20 ECTS by the end of semester 1, otherwise ≥30 by the end of semester 2 | Hand-encode them as `degree_rules.yaml`. The planner is a constraint solver |
 | F10 | The catalogue contains its own ground truth | The overview tables on pp. 5–16 list PN, contact hours (SWS), ECTS, professor and language per module group | Reconcile extracted fields against them for free QA |
 | F11 | The "Baukasten" (building blocks) on p. 18 | Corrected 2026-11-26: the page has a text layer (module groups as building blocks); Docling exported it only as `<!-- image -->` | The rules are also in text on p. 17. Hand-encode them; read p. 18 from the text layer if needed |
@@ -500,6 +500,8 @@ def segment_modules(pdf_path: str) -> list[Segment]:
 Front-matter segments get fixed page ranges: regulations 3–4, overview 5–16, rules 17–18, sample plans 20–21.
 Test: `len(segments) == 201`, PNs unique, and every module ID appears in the first lines of its start page.
 
+> *Done 2026-11-28, differently from the skeleton below (ADR-015): the fields are assembled from the PDF text layer by page geometry, because Docling's grid loses text and merges cells (F13). See `src/student_path/ingestion/fields.py`. The Docling-based skeleton is kept for reference.*
+
 **P1.4 Field assembly with label anchors.** This uses the docling-core API (verified against your installed version):
 
 ```python
@@ -567,6 +569,8 @@ def assemble_fields(doc: DoclingDocument, page_start: int, page_end: int) -> dic
 
 The spike version reset `current` for each table and ignored text items. The two changes above close most of the remaining 1–2% gap. Check them against the 20 gold modules.
 
+> *Simplified by P1.4: line-break hyphens arrive as soft hyphens (U+00AD) from the text layer, so joining at them is exact; the corpus-aware rule below is only needed for hyphens the text layer does not mark.*
+
 **P1.5 Clean.** Apply Unicode NFKC, collapse whitespace, then de-hyphenate using the corpus itself as the dictionary:
 
 ```python
@@ -595,6 +599,8 @@ def dehyphenate(text: str, vocab: Counter) -> str:
 ```
 
 Gate: fewer than 20 artifacts remain, down from 2,124. Tip: pypdfium2's text layer marks line-break hyphens as `U+FFFE`, which gives a second, independent signal for checking your rule.
+
+> *Largely obsolete after P1.4 (ADR-015): no value starts with a fragment of the previous field. P1.6 shrinks to a regression check.*
 
 **P1.6 Page-break bleed repair.** A value that starts with a lowercase fragment (50 `content` values) usually begins with the tail of the previous field.
 - **Heuristic first:** if `prev` ends mid-word and `fragment + next word` forms a vocabulary word, move the fragment back.

@@ -204,6 +204,26 @@ Chronological record of all development activity, decisions, and findings.
 
 ---
 
+## 2026-11-28 — P1.4: field assembly from the text layer (ADR-015)
+
+### What happened
+- Profiled the label column of the Docling tables first: labels split over two rows, two labels merged into one cell, label leftovers in the next row, header cells stretched over several rows, and 1- to 4-column variants of the same visual table. Docling's grid is unreliable for this layout.
+- Measured the page geometry instead: label text starts at x = 77-81 pt, value text at x >= 223 pt, nothing in between; running header at y = 810-820, page number at y = 53-61.
+- `ingestion/fields.py` assembles each module from the PDF text layer: text runs are grouped into lines per column; a label-column line matching one of the 17 labels starts a field; all value-column text up to the next label (across page breaks) is its value. `sp ingest fields` writes `data/interim/fields.jsonl`.
+- Bugs found and fixed on real data: 222 header lines were dropped (module number and title start in the label column); superscripts (L^1) split from their base line, fixed by vertical-overlap grouping plus a word-gap threshold of 2.5 pt (measured: in-word gaps <= 1.7 pt, word gaps >= 3.6 pt).
+- pdfium returns line-break hyphens as U+0002 in bounded text (U+FFFE in get_text_range, 3,676 each); stored as soft hyphens (U+00AD).
+- Results on all 201 modules: all 17 labels found exactly once in every module; values empty only for two rows the catalogue leaves blank (PN 568320); no page-break bleed (the System Security outcomes end with "...mic principles to practical requirements.", content starts "Der Inhalt des Moduls"); >= 99.9% of each module's words reassembled; 1.3 s for the catalogue.
+- Tooling: invisible characters had slipped into source files as literals (an editing tool turned escape sequences into raw characters). Replaced with escapes; a new `no-invisible-characters` pre-commit hook (UTF-8 byte pattern, because pygrep matches bytes) blocks them, tested both ways.
+- Tests: `tests/test_fields.py` (21 tests). Full suite: 60 passing, 1 slow deselected.
+
+### Key decisions
+- ADR-015: module fields come from the text layer by geometry; ADR-007 amended (Docling for the front matter). F8 (bleed) resolved; P1.6 shrinks to a regression check; P1.5 can join exactly at soft hyphens.
+
+### Next steps
+- P1.5: clean (NFKC, whitespace, de-hyphenation at soft hyphens and the remaining real line-end hyphens).
+
+---
+
 <!--
 Template for new entries:
 

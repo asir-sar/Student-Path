@@ -29,9 +29,9 @@ Progress tracker for the v2 plan. Details, code skeletons and the reasoning behi
 - [x] **P1.1** Probe: manifest with SHA-256, page count, text-layer check, bookmark count (`sp ingest probe`)
 - [x] **P1.2** Re-run Docling once: OCR off, TableFormer `ACCURATE`, cell matching; cache `data/interim/docling.json`; text coverage ≥99.5% overall, no page <80% (`sp ingest coverage`)
 - [x] **P1.3** Segment modules by PDF bookmarks (201 page ranges, PN as key) + tests (`sp ingest segment`)
-- [ ] **P1.4** Field assembly with the 17 label anchors (field carried across tables and pages)
+- [x] **P1.4** Field assembly with the 17 label anchors, from the PDF text layer by geometry (ADR-015; `sp ingest fields`)
 - [ ] **P1.5** Clean: NFKC, corpus-aware de-hyphenation (2,124 artifacts → fewer than 20)
-- [ ] **P1.6** Page-break bleed repair (heuristic first, LLM returns offsets only)
+- [ ] **P1.6** Page-break bleed check (largely solved by P1.4's geometry; keep as a regression test)
 - [ ] **P1.7** Rule-based typing (ECTS, SWS, workload, offering, languages, groups, people)
 - [ ] **P1.8** Gemini normalization with schema + grounding check, cached
 - [ ] **P1.9** Entity linking of prerequisites → PN; prerequisite graph
