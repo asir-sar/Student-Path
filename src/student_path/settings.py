@@ -45,6 +45,16 @@ class Settings(BaseSettings):
         return value if value.is_absolute() else PROJECT_ROOT / value
 
     @property
+    def interim_dir(self) -> Path:
+        """Cached intermediate artifacts (e.g. the Docling JSON)."""
+        return self.data_dir / "interim"
+
+    @property
+    def processed_dir(self) -> Path:
+        """Pipeline outputs (manifest, module records, QA report)."""
+        return self.data_dir / "processed"
+
+    @property
     def legacy_dir(self) -> Path:
         """Outputs of the superseded v1 pipeline (Docling OCR run, regex-normalized modules.json)."""
         return self.data_dir / "legacy"

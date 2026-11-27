@@ -21,6 +21,10 @@ legacy_app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(legacy_app, name="legacy")
+ingest_app = typer.Typer(
+    help="v2 ingestion pipeline (phase P1): PDF -> module records.", no_args_is_help=True
+)
+app.add_typer(ingest_app, name="ingest")
 
 
 def _print_version(value: bool) -> None:
@@ -164,3 +168,19 @@ def legacy_normalize(
     save_modules(modules, str(output))
     if inspect:
         inspect_modules(modules, inspect_count)
+
+
+@ingest_app.command("probe")
+def ingest_probe() -> None:
+    """P1.1: describe the source PDF (checksum, pages, text layer, version, bookmarks) in a manifest."""
+    from student_path.ingestion.probe import probe, write_manifest
+
+    settings = get_settings()
+    manifest = probe(settings.pdf_path)
+    out = settings.processed_dir / "manifest.json"
+    write_manifest(manifest, out)
+    typer.echo(f"{manifest.pdf_name}: {manifest.pages} pages, version {manifest.catalogue_version}")
+    typer.echo(f"  sha256 {manifest.pdf_sha256}")
+    typer.echo(f"  pages without text layer: {len(manifest.pages_without_text)}")
+    typer.echo(f"  bookmarks: {manifest.bookmarks}, with exam number (modules): {manifest.module_bookmarks}")
+    typer.echo(f"Saved {out}")
