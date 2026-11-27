@@ -74,6 +74,8 @@ build-backend = "uv_build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-m 'not slow'"  # slow tests: uv run pytest -m slow
+markers = ["slow: runs real model inference (Docling); excluded by default"]
 filterwarnings = [
     # qdrant-client warns when no server answers its version probe; tests do that on purpose
     "ignore:Failed to obtain server version:UserWarning",

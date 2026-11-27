@@ -4,6 +4,7 @@ Heavy libraries (Docling, torch) are imported inside the commands that need them
 so `sp --help` and `sp config` stay fast.
 """
 
+import json
 from pathlib import Path
 from typing import Annotated
 
@@ -183,4 +184,66 @@ def ingest_probe() -> None:
     typer.echo(f"  sha256 {manifest.pdf_sha256}")
     typer.echo(f"  pages without text layer: {len(manifest.pages_without_text)}")
     typer.echo(f"  bookmarks: {manifest.bookmarks}, with exam number (modules): {manifest.module_bookmarks}")
+    typer.echo(f"Saved {out}")
+
+
+@ingest_app.command("extract")
+def ingest_extract(
+    pages: Annotated[str | None, typer.Option(help="Page range, 1-based and inclusive, e.g. 49-51")] = None,
+    threads: Annotated[int, typer.Option(help="CPU threads for Docling's models")] = 8,
+    force: Annotated[bool, typer.Option(help="Re-run even if the cached output exists")] = False,
+) -> None:
+    """P1.2: run Docling (OCR off, TableFormer ACCURATE) and cache the DoclingDocument JSON."""
+    page_range = _parse_pages(pages)
+    settings = get_settings()
+    name = "docling.json" if page_range is None else f"docling_p{page_range[0]}-{page_range[1]}.json"
+    out = settings.interim_dir / name
+    if out.exists() and not force:
+        typer.echo(f"Cached: {out} (use --force to re-run)")
+        return
+
+    from student_path.ingestion.extract import extract
+
+    typer.echo(f"Running Docling on {settings.pdf_path.name} ({pages or 'all pages'}) ...")
+    stats = extract(settings.pdf_path, out, page_range=page_range, num_threads=threads)
+    typer.echo(
+        f"Done in {stats.seconds:.0f} s: {stats.pages_converted} pages, {stats.tables} tables, "
+        f"{stats.texts} text items (docling {stats.docling_version})"
+    )
+    typer.echo(f"Saved {out}")
+
+
+@ingest_app.command("coverage")
+def ingest_coverage(
+    doc: Annotated[
+        Path | None, typer.Option(help="DoclingDocument JSON [default: data/interim/docling.json]")
+    ] = None,
+    threshold: Annotated[float, typer.Option(help="Pages below this share are listed")] = 0.99,
+    show: Annotated[int, typer.Option(help="How many of the weakest pages to print")] = 15,
+) -> None:
+    """P1.2 gate: share of the PDF's text layer that survives in the Docling output, per page."""
+    from student_path.ingestion.coverage import text_coverage
+
+    settings = get_settings()
+    doc = doc or settings.interim_dir / "docling.json"
+    if not doc.exists():
+        raise typer.BadParameter(f"not found: {doc} (run `sp ingest extract` first)", param_hint="--doc")
+    pages = text_coverage(settings.pdf_path, doc)
+    words = sum(p.pdf_words for p in pages)
+    overall = sum(p.pdf_words * p.covered for p in pages) / words if words else 1.0
+    weak = sorted((p for p in pages if p.covered < threshold), key=lambda p: p.covered)
+    out = settings.processed_dir / f"coverage_{doc.stem}.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(
+        json.dumps(
+            {"doc": doc.name, "overall": overall, "pages": len(pages), "below_threshold": len(weak),
+             "threshold": threshold, "per_page": [p.model_dump() for p in pages]},
+            indent=1,
+        ) + "\n",
+        encoding="utf-8",
+    )  # fmt: skip
+    typer.echo(f"{doc.name}: {overall:.2%} of {words} text-layer words covered over {len(pages)} pages")
+    typer.echo(f"pages below {threshold:.0%}: {len(weak)}")
+    for p in weak[:show]:
+        typer.echo(f"  p.{p.page:>3} {p.covered:6.1%}  missing e.g. {', '.join(p.missing_sample[:6])}")
     typer.echo(f"Saved {out}")
