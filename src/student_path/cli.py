@@ -262,3 +262,26 @@ def ingest_coverage(
     for p in weak[:show]:
         typer.echo(f"  p.{p.page:>3} {p.covered:6.1%}  missing e.g. {', '.join(p.missing_sample[:6])}")
     typer.echo(f"Saved {out}")
+
+
+@ingest_app.command("fields")
+def ingest_fields() -> None:
+    """P1.4: assemble each module's 17 raw fields from the PDF text layer (needs `sp ingest segment`)."""
+    from student_path.ingestion.fields import FIELD_KEYS, assemble_all, read_segments, write_fields
+
+    settings = get_settings()
+    segments_path = settings.interim_dir / "segments.jsonl"
+    if not segments_path.exists():
+        raise typer.BadParameter(f"not found: {segments_path} (run `sp ingest segment` first)")
+    modules = assemble_all(settings.pdf_path, read_segments(segments_path))
+    out = settings.interim_dir / "fields.jsonl"
+    write_fields(modules, out)
+    typer.echo(f"{len(modules)} modules, {len(FIELD_KEYS)} fields each")
+    for key in FIELD_KEYS:
+        missing = [m.pn for m in modules if key in m.missing]
+        empty = [m.pn for m in modules if key in m.empty]
+        if missing or empty:
+            typer.echo(f"  {key}: label missing in {missing or 'none'}, value empty in {empty or 'none'}")
+    repeated = [m.pn for m in modules if m.repeated]
+    typer.echo(f"  modules with a repeated label: {repeated or 'none'}")
+    typer.echo(f"Saved {out}")
