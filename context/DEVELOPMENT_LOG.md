@@ -175,6 +175,35 @@ Chronological record of all development activity, decisions, and findings.
 
 ---
 
+## 2026-11-26 to 2026-11-28 — Phase 1 start: P1.1 probe, P1.2 extraction, text-coverage check, P1.3 scaffold
+
+### What happened
+- Branch `p1-data-foundation` (from `p0-uv-setup`; Phase 0 not yet merged into `main`).
+- Settings: a key and two model ids had been typed into `.env.example`; moved to `.env`, template restored. The key is **rejected by Google** for both the Gemini Developer API and Vertex AI (`401`, it starts with `AQ.`, likely a service-account key). A Gemini key from AI Studio is needed before P1.8. Model ids `gemini-3.8-flash` / `gemini-4-hydrogen` are unverified until then.
+- **P1.1** `sp ingest probe` writes `data/processed/manifest.json`: sha256 `1ddab276...`, 603 pages, no page without text layer, version 2025-10-13 (parsed from "Stand:"), 204 bookmarks, 201 with an exam number. `tests/test_probe.py` pins these as a source contract.
+- **P1.2** `sp ingest extract` (OCR off, TableFormer ACCURATE, cell matching, 8 threads) caches `data/interim/docling.json` plus a stats file. Trial pages 49–51: 48 s including model loading. The first full run was killed when a session ended; restarted on 2026-11-28 00:14 as a detached process.
+- **Text-coverage check** (`ingestion/coverage.py`, `sp ingest coverage`): share of the PDF text-layer words found again in Docling's output, per page. Two metric bugs were found and fixed on real cases: the text layer interleaves both table columns line by line, and Docling joins or splits hyphenated words inconsistently. Unit tests cover the real cases and a synthetic dropped cell.
+- Results (finding F13): the legacy OCR run covers 99.73% of words, but 25 pages are below 99% (worst p. 272: 83.8%, whole sentences of a long cell). Docling's cell matching drops PDF cells that fit no row/column band. Same sample pages, other settings: cell matching off is worse (overview tables ~50%, p. 315 17%); OCR on/off is identical. An untuned pdfplumber ruled-table spike gets the table shapes right (6-column overview tables, 2-column module tables) and is about 60x faster, but covers only 96.7%.
+- Correction (F11): the Baukasten page (p. 18) does have a text layer.
+- **P1.2 full run done (2026-11-28):** 603 pages in 920 s (15 min, OCR off, 8 threads), 580 tables, 2,178 text items. Coverage gate passed: 99.74% of 117,998 text-layer words, 24 pages below 99%, worst p. 272 at 83.8% (gate: >= 99.5% overall, no page < 80%). Per-page results in `data/processed/coverage_docling.json`.
+- **P1.3 done (2026-11-28):** implemented by the assistant at the owner's request. `segment_modules` reads the PDF outline, keeps the 201 bookmarks with an exam number, and derives each page range from the next module's start. Result: 201 modules, pages 32-603 without gaps, 9 without a module ID, `xxxxxx` keyed as `new-6133`; `data/interim/segments.jsonl`. 8/8 P1.3 tests pass; full suite 39 passing.
+- The Gemini key in `.env` now works (it had lost its `=`); both model ids are available.
+- **P1.3 scaffold** (owner implements, "Mixed" split agreed): `ingestion/segment.py` (Segment model, FRONT_MATTER page ranges checked against the PDF text, `write_segments`, `sp ingest segment`) and `tests/test_segment.py` (8 tests). The tests were validated against a private reference implementation kept outside the repo.
+- Tests: 30 passing, 1 skipped (full-run coverage gate, until `docling.json` exists), 1 slow deselected; 8 P1.3 tests red until implemented. Ruff and pyright clean.
+
+### Key decisions
+- Keep Docling with cell matching (ADR-007 holds); the coverage gate is part of P1.2 (≥99.5% overall, no page <80%). Weak pages go into the QA report; repair (Docling structure + text-layer cell text) only if P1.12's gold modules show field damage.
+- Work split for Phase 1 ("Mixed"): owner writes P1.3, P1.4, P1.5 and the P1.8 prompt; the assistant writes their tests and scaffolding and implements the mechanical steps.
+- Long-running jobs are started detached, so a closing session cannot kill them.
+
+### Open questions
+- A valid Gemini API key and confirmed model ids (before P1.8).
+
+### Next steps
+- Owner: implement P1.3 (`uv run pytest tests/test_segment.py`). Assistant: check the full Docling run against the gate, then write the P1.4 tests from the new `docling.json`.
+
+---
+
 <!--
 Template for new entries:
 

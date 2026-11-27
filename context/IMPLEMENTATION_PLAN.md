@@ -58,8 +58,9 @@
 | F8 | What is still dirty | 50 `content` values start with a page-break fragment ("mic principles to practical requirements." is the tail of the learning outcomes). Also 11 `assessment` and 3 `literature` values. 2,124 hyphenation artifacts ("Nach- bearbeitung", "analy- sis"). German and English are interleaved in one value ("Keine None", "Jedes Sommersemester Every summer semester") | Add clean and normalize stages with grounding checks |
 | F9 | The catalogue states its own rules | p. 17: ≥120 ECTS in total; ≥40 ECTS in one focus group (AlgMath, ProgSoft, InfKomm, ITS, IT-SecRel); ≥30 ECTS from the other focus groups plus General Area; compulsory Seminar 5 + Master's Thesis 27 + Presentation 3. p. 18: ≥20 ECTS by the end of semester 1, otherwise ≥30 by the end of semester 2 | Hand-encode them as `degree_rules.yaml`. The planner is a constraint solver |
 | F10 | The catalogue contains its own ground truth | The overview tables on pp. 5–16 list PN, contact hours (SWS), ECTS, professor and language per module group | Reconcile extracted fields against them for free QA |
-| F11 | The "Baukasten" (building blocks) on p. 18 is an image | Docling emits `<!-- image -->` | The rules are also in text on p. 17. Hand-encode them; describing the image with a VLM is optional |
+| F11 | The "Baukasten" (building blocks) on p. 18 | Corrected 2026-11-26: the page has a text layer (module groups as building blocks); Docling exported it only as `<!-- image -->` | The rules are also in text on p. 17. Hand-encode them; read p. 18 from the text layer if needed |
 | F12 | Hardware | CPU only (i7-11850H, 32 GB RAM, torch `+cpu`); Docker 29 available | BGE-M3 indexing is a cached one-off job on CPU. Budget cross-encoder reranking at about 15 short passages per query |
+| F13 | Docling loses text in long table cells (measured 2026-11-28) | A text-coverage check (share of the PDF text-layer words found again in Docling's output, `sp ingest coverage`): 99.73% over all 603 pages, but 25 pages below 99%, worst p. 272 at 83.8% (whole sentences of a long cell). The log shows Docling's cell matching dropping PDF cells that fit no row/column band. Cell matching off is worse (overview tables ~50%, p. 315 17%); OCR on/off makes no difference. A first pdfplumber ruled-table spike gets the table shapes right (6-column overview tables) but covers only 96.7% | Keep Docling with cell matching (ADR-007). Coverage is part of the P1.2 gate and the weak pages are listed in the QA report. If P1.12's gold modules show field damage, repair with a hybrid: Docling for row structure, PDF text layer for the cell text |
 
 Page map: regulations pp. 3–4 (DE then EN) · module group overview pp. 5–16 · degree rules p. 17 · first-semester rule and Baukasten p. 18 · sample study plans pp. 20–21 · module descriptions from p. 32.
 
@@ -454,6 +455,8 @@ doc.save_as_json("data/interim/docling.json")
 ```
 
 Compare the runtime with your OCR run and write the number in the development log.
+
+Then check that no text was lost: `uv run sp ingest coverage` compares every page with the PDF's own text layer (see F13). **Gate:** at least 99.5% of text-layer words overall, no page below 80%; pages below 99% are listed and carried into the QA report.
 
 **P1.3 Segment by bookmarks.**
 
@@ -1072,7 +1075,7 @@ def test_no_table_artifacts(modules):
 
 | ID | Question | Variants | Decide by |
 |---|---|---|---|
-| E1 | Which extraction path? | Markdown regex (old) · bookmarks + Docling JSON · + LLM normalize · pdfplumber geometry | Field accuracy, effort |
+| E1 | Which extraction path? | Markdown regex (old) · bookmarks + Docling JSON · + LLM normalize · pdfplumber geometry | Field accuracy, effort · *partial 2026-11-28: text coverage Docling 99.73% vs. pdfplumber (untuned) 96.7%, see F13* |
 | E1b | DE/EN split | LLM + grounding · `lingua` sentence language ID | Accuracy, cost |
 | E2 | Chunking | One vector per module · multi-view | Recall@10, nDCG |
 | E3 | Retrieval | Dense · sparse · hybrid RRF · + rerank · (+ ColBERT) | nDCG, p95 latency |

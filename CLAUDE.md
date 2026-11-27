@@ -6,8 +6,9 @@ Guidance for AI coding assistants (and humans) working in this repository.
 
 Student-Path: a RAG chatbot and semester planner for the M.Sc. Informatik module catalogue
 (`data/source/Modulkatalog-Master-Informatik.pdf`, 603 pages, 201 modules). Architecture: structured-first
-agentic hybrid RAG. It is a practice project: the owner writes the learning-critical code; assistants
-scaffold, review and explain.
+agentic hybrid RAG. It is a practice project. Work split (owner's decision, 2026-11-28): the assistant
+implements the plan step by step, including the core pipeline code, and explains each step's key decisions;
+the owner reviews and decides.
 
 ## Read first
 

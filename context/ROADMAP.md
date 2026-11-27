@@ -22,13 +22,13 @@ Progress tracker for the v2 plan. Details, code skeletons and the reasoning behi
 
 ---
 
-## Phase 1: Data foundation v2 🟡 NEXT
+## Phase 1: Data foundation v2 🟡 IN PROGRESS
 
 > **Goal:** 201 validated, typed module records and a QA report you trust.
 
-- [ ] **P1.1** Probe: manifest with SHA-256, page count, text-layer check, bookmark count
-- [ ] **P1.2** Re-run Docling once: OCR off, TableFormer `ACCURATE`, cell matching; cache `data/interim/docling.json`
-- [ ] **P1.3** Segment modules by PDF bookmarks (201 page ranges, PN as key) + tests
+- [x] **P1.1** Probe: manifest with SHA-256, page count, text-layer check, bookmark count (`sp ingest probe`)
+- [x] **P1.2** Re-run Docling once: OCR off, TableFormer `ACCURATE`, cell matching; cache `data/interim/docling.json`; text coverage ≥99.5% overall, no page <80% (`sp ingest coverage`)
+- [x] **P1.3** Segment modules by PDF bookmarks (201 page ranges, PN as key) + tests (`sp ingest segment`)
 - [ ] **P1.4** Field assembly with the 17 label anchors (field carried across tables and pages)
 - [ ] **P1.5** Clean: NFKC, corpus-aware de-hyphenation (2,124 artifacts → fewer than 20)
 - [ ] **P1.6** Page-break bleed repair (heuristic first, LLM returns offsets only)
